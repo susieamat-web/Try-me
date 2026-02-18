@@ -1,34 +1,34 @@
-# 🐰 Rabbit Worlds — Mobile Edition
+# 🐰 Rabbit Worlds: Pro Mobile 🚀
 
+![Game Preview](banner.png)
 
-
-Welcome to **Rabbit Worlds**, a fast-paced platformer adventure designed for both **Mobile** and **Desktop**! Use the on-screen buttons to jump on enemies and reach new high scores.
+Experience a high-quality, neon-styled platformer adventure! This version is fully optimized for **mobile touchscreens** and features advanced animations, parallax backgrounds, and smooth physics.
 
 ## 🕹️ Play Now
-👉 **[CLICK HERE TO PLAY THE GAME](https://susieamat-web.github.io/Try-me/)**
+👉 **[START ADVENTURE](https://susieamat-web.github.io/Try-me/)**
 
 ---
 
-## 📱 How to Play (Mobile & PC)
-* **Left/Right Arrows (on screen):** Move the Rabbit left and right.
-* **Up Arrow (on screen):** Jump to reach platforms and avoid enemies.
-* **Objective:** Stomp on the red enemies from above to gain **50 points**. 
-* **Warning:** If an enemy touches you from the side, you lose a life!
+## ✨ Pro Features
+* **Animated Graphics:** A rabbit that turns and jumps realistically.
+* **Squash & Stretch Slimes:** Enemies that bounce as they move.
+* **Atmospheric Background:** Moving clouds and beautiful sky gradients.
+* **Glassmorphism UI:** Modern, transparent score and life tracking.
+* **Responsive Design:** Perfect fit for both phones (landscape) and PC.
 
 ---
 
-## ✨ Features
-* **Touch Controls:** Custom buttons designed for mobile gameplay.
-* **Smooth Physics:** Optimized gravity and movement for a fun experience.
-* **Dynamic Enemies:** Slime-like enemies that spawn as you progress.
-* **High-DPI Canvas:** Crisp graphics that look great on any screen.
+## 📱 Mobile Controls
+* **Left/Right Buttons:** Precise movement control.
+* **Jump Button:** Tap to leap over gaps and stomp enemies.
+* **Strategy:** Land on top of red slimes to gain **100 points**!
 
 ---
 
-## 🛠️ Installation & Setup
-1. Upload the `index.html` to your GitHub repository named **Try-me**.
-2. Go to **Settings > Pages** and ensure the source is set to the `main` branch.
-3. Open the link on your smartphone (best played in **Landscape/Horizontal** mode).
+## 🛠️ Technical Details
+* **Engine:** Custom JavaScript Canvas Engine (60 FPS).
+* **Optimization:** Zero external assets—everything is rendered via high-performance code.
+* **Storage:** Scores are calculated in real-time.
 
 ---
-*Developed by [susieamat-web](https://github.com/susieamat-web)*
+*Developed with ❤️ by [susieamat-web](https://github.com/susieamat-web)*
