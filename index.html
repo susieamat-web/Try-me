@@ -1,141 +1,885 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rabbit Worlds</title>
-<style>
-body{
-    margin:0;
-    background:#5cc6ff;
-    overflow:hidden;
-    font-family:Arial, sans-serif;
-}
-canvas{ display:block; margin:0 auto; background:#87CEEB; }
-#ui{
-    position:absolute;
-    top:10px;
-    left:50%;
-    transform:translateX(-50%);
-    color:white;
-    font-weight:bold;
-}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rabbit Worlds — Platformer</title>
+  <style>
+    :root{ --ui: rgba(0,0,0,.45); --txt:#fff; --btn: rgba(255,255,255,.14); --btnb: rgba(255,255,255,.22); }
+    body{ margin:0; overflow:hidden; background:#5cc6ff; font-family:system-ui, Arial; }
+    #ui{
+      position:fixed; left:50%; top:10px; transform:translateX(-50%);
+      padding:8px 12px; border-radius:12px; background:var(--ui); color:var(--txt);
+      font-weight:700; display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+      backdrop-filter: blur(6px);
+      user-select:none;
+      z-index: 10;
+    }
+    #hint{
+      position:fixed; left:10px; bottom:10px;
+      padding:8px 10px; border-radius:12px; background:var(--ui); color:var(--txt);
+      font-size:13px; backdrop-filter: blur(6px);
+      user-select:none;
+      z-index: 10;
+    }
+    #pauseBtn{
+      appearance:none; border:1px solid var(--btnb); background:var(--btn); color:var(--txt);
+      padding:6px 10px; border-radius:10px; cursor:pointer; font-weight:800;
+    }
+    #pauseBtn:active{ transform: translateY(1px); }
+
+    .overlay{
+      position:fixed; inset:0; display:none; place-items:center;
+      background: rgba(0,0,0,.55); backdrop-filter: blur(6px);
+      z-index: 20;
+    }
+    .overlay.show{ display:grid; }
+    .card{
+      width:min(520px, 92vw);
+      background: rgba(0,0,0,.55);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius:16px;
+      padding:16px 16px 14px;
+      color:var(--txt);
+    }
+    .card h2{ margin:0 0 8px; font-size:20px; }
+    .card p{ margin:6px 0; opacity:.9; line-height:1.35; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    .row button{
+      appearance:none; border:1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.14); color:var(--txt);
+      padding:9px 12px; border-radius:12px; cursor:pointer; font-weight:800;
+    }
+
+    canvas{ display:block; width:100vw; height:100vh; }
+  </style>
 </head>
 <body>
-<div id="ui">Score: <span id="score">0</span> | Highscore: <span id="high">0</span> | Wereld: <span id="world">1</span></div>
-<canvas id="game" width="960" height="540"></canvas>
+  <div id="ui">
+    <span>Wereld: <span id="uiWorld">1</span>/3</span>
+    <span>Score: <span id="uiScore">0</span></span>
+    <span>Highscore: <span id="uiHigh">0</span></span>
+    <span>Levens: <span id="uiLives">3</span></span>
+    <span id="uiBoss" style="display:none;">Baas HP: <span id="uiBossHp">0</span></span>
+    <button id="pauseBtn" type="button" aria-label="Pause or resume">Pauze</button>
+  </div>
+  <div id="hint">← → bewegen · ↑ springen · Spatie schieten · P pauze · R reset</div>
+
+  <div id="pauseOverlay" class="overlay" aria-hidden="true">
+    <div class="card">
+      <h2>Paused</h2>
+      <p>Game is paused. Click “Resume” or press <b>P</b>.</p>
+      <div class="row">
+        <button id="resumeBtn" type="button">Resume</button>
+        <button id="restartBtn" type="button">Restart (R)</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="game" width="960" height="540"></canvas>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+(() => {
+  // ===== Canvas / scale =====
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const W = 960, H = 540;
+  let dpr = 1;
 
-const gravity = 0.7;
-let keys = {};
-let world = 1;
-let score = 0;
-let highscore = localStorage.getItem("rabbit_high") || 0;
-document.getElementById("high").innerText = highscore;
+  function fit() {
+    dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  fit();
+  window.addEventListener("resize", fit);
 
-let cameraX = 0;
+  // ===== UI =====
+  const UI = {
+    world: document.getElementById("uiWorld"),
+    score: document.getElementById("uiScore"),
+    high: document.getElementById("uiHigh"),
+    lives: document.getElementById("uiLives"),
+    bossWrap: document.getElementById("uiBoss"),
+    bossHp: document.getElementById("uiBossHp"),
+    pauseBtn: document.getElementById("pauseBtn"),
+    overlay: document.getElementById("pauseOverlay"),
+    resumeBtn: document.getElementById("resumeBtn"),
+    restartBtn: document.getElementById("restartBtn"),
+  };
 
-class Player{
-    constructor(){
-        this.x=100;
-        this.y=300;
-        this.w=40;
-        this.h=50;
-        this.vx=0;
-        this.vy=0;
-        this.onGround=false;
-        this.cooldown=0;
+  // ===== Helpers =====
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand = (a,b)=>a+Math.random()*(b-a);
+
+  function aabb(ax,ay,aw,ah, bx,by,bw,bh){
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+
+  // ===== Embedded sprite images (SVG) =====
+  function svgData(svg){ return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); }
+  function makeImg(svg){
+    const img = new Image();
+    img.src = svgData(svg);
+    return img;
+  }
+
+  // Tiles (32x32)
+  const TILE = 32;
+
+  const IMG = {
+    sky: makeImg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7fd8ff"/>
+            <stop offset="1" stop-color="#b8f0ff"/>
+          </linearGradient>
+        </defs>
+        <rect width="960" height="540" fill="url(#g)"/>
+        <g opacity="0.25">
+          <ellipse cx="150" cy="110" rx="90" ry="40" fill="#fff"/>
+          <ellipse cx="210" cy="110" rx="70" ry="35" fill="#fff"/>
+          <ellipse cx="720" cy="140" rx="110" ry="45" fill="#fff"/>
+          <ellipse cx="800" cy="140" rx="85" ry="38" fill="#fff"/>
+        </g>
+      </svg>
+    `),
+    ground: makeImg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+        <rect width="32" height="32" fill="#3aa655"/>
+        <rect y="22" width="32" height="10" fill="#2b7a3f"/>
+        <g opacity=".25">
+          <circle cx="6" cy="26" r="2" fill="#0b3f1f"/>
+          <circle cx="18" cy="28" r="2.5" fill="#0b3f1f"/>
+          <circle cx="28" cy="25" r="1.8" fill="#0b3f1f"/>
+        </g>
+        <path d="M0 22h32" stroke="#1f5b33" stroke-width="2" opacity=".6"/>
+      </svg>
+    `),
+    brick: makeImg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+        <rect width="32" height="32" fill="#c86a3a"/>
+        <g stroke="#7a3a1f" stroke-width="2" opacity=".9">
+          <path d="M0 10h32M0 22h32"/>
+          <path d="M8 0v10M24 0v10"/>
+          <path d="M16 10v12"/>
+          <path d="M8 22v10M24 22v10"/>
+        </g>
+        <g opacity=".18">
+          <circle cx="7" cy="7" r="2" fill="#fff"/>
+        </g>
+      </svg>
+    `),
+    question: makeImg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+        <rect width="32" height="32" rx="4" fill="#f5c400"/>
+        <rect x="2" y="2" width="28" height="28" rx="4" fill="none" stroke="#a77f00" stroke-width="2"/>
+        <path d="M16 22v-2c0-3 6-2 6-7c0-3-2.5-5-6-5s-6 2-6 5" fill="none" stroke="#6b5200" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="16" cy="26" r="2" fill="#6b5200"/>
+        <path d="M6 7h10" stroke="#fff" stroke-width="3" opacity=".35" stroke-linecap="round"/>
+      </svg>
+    `),
+    pipe: makeImg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+        <rect x="14" y="18" width="36" height="46" fill="#2aa84a" stroke="#0f5c26" stroke-width="4"/>
+        <rect x="10" y="8" width="44" height="14" rx="3" fill="#38c45f" stroke="#0f5c26" stroke-width="4"/>
+        <path d="M18 22v40" stroke="#7cf3a0" stroke-width="4" opacity=".35"/>
+      </svg>
+    `),
+    rabbit1: makeImg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+        <defs>
+          <radialGradient id="rg" cx="40%" cy="30%" r="70%">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#dfe8e5"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="32" cy="40" rx="18" ry="18" fill="url(#rg)"/>
+        <ellipse cx="24" cy="14" rx="7" ry="16" fill="#eef5f2"/>
+        <ellipse cx="40" cy="14" rx="7" ry="16" fill="#eef5f2"/>
+        <ellipse cx="24" cy="16" rx="4" ry="12" fill="#ffb6c1" opacity=".65"/>
+        <ellipse cx="40" cy="16" rx="4" ry="12" fill="#ffb6c1" opacity=".65"/>
+        <circle cx="26" cy="38" r="2.2" fill="#22332a"/>
+        <circle cx="38" cy="38" r="2.2" fill="#22332a"/>
+        <path d="M32 40c2 2 2 4 0 6c-2-2-2-4 0-6Z" fill="#ff7aa2"/>
+        <ellipse cx="32" cy="50" rx="10" ry="6" fill="#fff" opacity=".6"/>
+        <path d="M18 52c4 2 6 2 10 0" stroke="#cfdad6" stroke-width="4" stroke-linecap="round"/>
+        <path d="M36 52c4 2 6 2 10 0" stroke="#cfdad6" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+    `),
+    rabbit2: makeImg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+        <defs>
+          <radialGradient id="rg2" cx="40%" cy="30%" r="70%">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#dfe8e5"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="32" cy="40" rx="18" ry="18" fill="url(#rg2)"/>
+        <ellipse cx="24" cy="14" rx="7" ry="16" fill="#eef5f2" transform="rotate(-6 24 14)"/>
+        <ellipse cx="40" cy="14" rx="7" ry="16" fill="#eef5f2" transform="rotate(6 40 14)"/>
+        <ellipse cx="24" cy="16" rx="4" ry="12" fill="#ffb6c1" opacity=".65" transform="rotate(-6 24 16)"/>
+        <ellipse cx="40" cy="16" rx="4" ry="12" fill="#ffb6c1" opacity=".65" transform="rotate(6 40 16)"/>
+        <circle cx="26" cy="38" r="2.2" fill="#22332a"/>
+        <circle cx="38" cy="38" r="2.2" fill="#22332a"/>
+        <path d="M32 40c2 2 2 4 0 6c-2-2-2-4 0-6Z" fill="#ff7aa2"/>
+        <ellipse cx="32" cy="50" rx="10" ry="6" fill="#fff" opacity=".6"/>
+        <path d="M20 52c3 3 7 3 10 0" stroke="#cfdad6" stroke-width="4" stroke-linecap="round"/>
+        <path d="M34 52c3 3 7 3 10 0" stroke="#cfdad6" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+    `),
+    enemy: makeImg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+        <defs>
+          <radialGradient id="eg" cx="35%" cy="30%" r="70%">
+            <stop offset="0" stop-color="#ff8f8f"/>
+            <stop offset="1" stop-color="#c12b2b"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="32" cy="38" rx="18" ry="16" fill="url(#eg)"/>
+        <circle cx="26" cy="34" r="3" fill="#1a1a1a"/>
+        <circle cx="38" cy="34" r="3" fill="#1a1a1a"/>
+        <path d="M26 44c4 3 8 3 12 0" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+        <path d="M20 52h24" stroke="#7a1a1a" stroke-width="6" stroke-linecap="round" opacity=".7"/>
+      </svg>
+    `),
+    boss: makeImg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+        <defs>
+          <radialGradient id="bg" cx="35%" cy="30%" r="75%">
+            <stop offset="0" stop-color="#d0a8ff"/>
+            <stop offset="1" stop-color="#6a2bb8"/>
+          </radialGradient>
+        </defs>
+        <circle cx="64" cy="72" r="44" fill="url(#bg)"/>
+        <circle cx="48" cy="66" r="7" fill="#151515"/>
+        <circle cx="80" cy="66" r="7" fill="#151515"/>
+        <path d="M46 92c10 10 26 10 36 0" stroke="#151515" stroke-width="8" stroke-linecap="round"/>
+        <path d="M26 44l22 10" stroke="#3b0f6e" stroke-width="10" stroke-linecap="round"/>
+        <path d="M102 44L80 54" stroke="#3b0f6e" stroke-width="10" stroke-linecap="round"/>
+        <path d="M64 18c10 0 18 8 18 18" stroke="#ffd166" stroke-width="10" stroke-linecap="round"/>
+        <circle cx="88" cy="40" r="8" fill="#ffd166"/>
+      </svg>
+    `),
+    fireball: makeImg(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+        <defs>
+          <radialGradient id="fg" cx="35%" cy="30%" r="70%">
+            <stop offset="0" stop-color="#fff2b0"/>
+            <stop offset="1" stop-color="#ff7a00"/>
+          </radialGradient>
+        </defs>
+        <circle cx="16" cy="16" r="10" fill="url(#fg)"/>
+        <path d="M20 6c2 4-1 6-3 8c2 0 5 0 7-3c1-2 0-4-4-5Z" fill="#ffd166" opacity=".9"/>
+      </svg>
+    `)
+  };
+
+  // ===== Worlds (tilemaps) =====
+  const ROWS = 17;
+  const COLS = 220;
+  const GROUND_Y = ROWS - 2;
+
+  function makeEmptyMap(){
+    const m = Array.from({length: ROWS}, () => Array.from({length: COLS}, () => 0));
+    for (let x=0; x<COLS; x++){
+      m[GROUND_Y][x] = 1;
+      m[GROUND_Y+1][x] = 1;
     }
-    update(){
-        if(keys["ArrowLeft"]) this.vx=-5;
-        else if(keys["ArrowRight"]) this.vx=5;
-        else this.vx=0;
-
-        if(keys["ArrowUp"] && this.onGround){
-            this.vy=-15;
-            this.onGround=false;
+    return m;
+  }
+  function addPlatform(m, x0, y, len, tile=2){
+    for (let x=x0; x<x0+len; x++) m[y][x] = tile;
+  }
+  function addPipe(m, x, topY, height){
+    m[topY][x] = 4; m[topY][x+1] = 4;
+    for (let y=topY+1; y<topY+height; y++){
+      m[y][x] = 5; m[y][x+1] = 5;
+    }
+  }
+  function addStairs(m, x0, baseY, steps){
+    for (let i=0;i<steps;i++){
+      for (let y=baseY-i; y<=baseY+1; y++){
+        for (let x=x0+i*2; x<x0+i*2+2; x++){
+          m[y][x] = 2;
         }
+      }
+    }
+  }
+  function buildWorld1(){
+    const m = makeEmptyMap();
+    for (let x=18; x<22; x++){ m[GROUND_Y][x]=0; m[GROUND_Y+1][x]=0; }
+    for (let x=55; x<60; x++){ m[GROUND_Y][x]=0; m[GROUND_Y+1][x]=0; }
+    for (let x=95; x<101; x++){ m[GROUND_Y][x]=0; m[GROUND_Y+1][x]=0; }
 
-        this.vy+=gravity;
-        this.x+=this.vx;
-        this.y+=this.vy;
+    addPlatform(m, 10, 10, 6, 2);
+    addPlatform(m, 28, 9, 5, 3);
+    addPlatform(m, 35, 12, 7, 2);
+    addPlatform(m, 70, 10, 6, 2);
+    addPlatform(m, 78, 8, 4, 3);
+    addPlatform(m, 110, 11, 7, 2);
 
-        if(this.y+this.h>=400){
-            this.y=400-this.h;
-            this.vy=0;
-            this.onGround=true;
+    addPipe(m, 40, 12, 5);
+    addPipe(m, 84, 11, 6);
+    addPipe(m, 130, 10, 7);
+
+    addStairs(m, 165, GROUND_Y-1, 6);
+    m[GROUND_Y-5][205] = 9;
+    return m;
+  }
+  function buildWorld2(){
+    const m = makeEmptyMap();
+    for (let x=22; x<28; x++){ m[GROUND_Y][x]=0; m[GROUND_Y+1][x]=0; }
+    for (let x=60; x<66; x++){ m[GROUND_Y][x]=0; m[GROUND_Y+1][x]=0; }
+    for (let x=120; x<128; x++){ m[GROUND_Y][x]=0; m[GROUND_Y+1][x]=0; }
+
+    addPlatform(m, 12, 11, 8, 2);
+    addPlatform(m, 34, 9, 6, 2);
+    addPlatform(m, 44, 7, 5, 3);
+    addPlatform(m, 76, 10, 8, 2);
+    addPlatform(m, 92, 8, 6, 2);
+    addPlatform(m, 140, 10, 8, 3);
+    addPlatform(m, 152, 8, 6, 2);
+
+    addPipe(m, 52, 12, 5);
+    addPipe(m, 104, 11, 6);
+    addPipe(m, 170, 10, 7);
+
+    addStairs(m, 180, GROUND_Y-1, 7);
+    m[GROUND_Y-5][205] = 9;
+    return m;
+  }
+  function buildWorld3(){
+    const m = makeEmptyMap();
+    for (let x=16; x<20; x++){ m[GROUND_Y][x]=0; m[GROUND_Y+1][x]=0; }
+    for (let x=48; x<54; x++){ m[GROUND_Y][x]=0; m[GROUND_Y+1][x]=0; }
+    for (let x=88; x<96; x++){ m[GROUND_Y][x]=0; m[GROUND_Y+1][x]=0; }
+    for (let x=142; x<150; x++){ m[GROUND_Y][x]=0; m[GROUND_Y+1][x]=0; }
+
+    addPlatform(m, 8, 10, 7, 2);
+    addPlatform(m, 26, 8, 6, 3);
+    addPlatform(m, 40, 12, 6, 2);
+    addPlatform(m, 62, 9, 7, 2);
+    addPlatform(m, 74, 7, 5, 3);
+    addPlatform(m, 108, 10, 8, 2);
+    addPlatform(m, 126, 8, 6, 2);
+    addPlatform(m, 158, 10, 10, 3);
+
+    addPipe(m, 32, 12, 5);
+    addPipe(m, 100, 11, 6);
+    addPipe(m, 172, 10, 7);
+
+    addStairs(m, 182, GROUND_Y-1, 8);
+    m[GROUND_Y-5][205] = 9;
+    return m;
+  }
+
+  const WORLDS = [buildWorld1(), buildWorld2(), buildWorld3()];
+
+  // ===== Game state =====
+  const keys = new Set();
+  let paused = false;
+
+  const hiKey = "rabbit_worlds_highscore_v2";
+  let high = Number(localStorage.getItem(hiKey) || 0);
+
+  const state = {
+    world: 1,
+    score: 0,
+    lives: 3,
+    cameraX: 0,
+    levelWidthPx: COLS * TILE,
+    boss: null,
+    bossSpawned: false,
+  };
+
+  const player = {
+    x: 3*TILE,
+    y: 6*TILE,
+    w: 30,
+    h: 36,
+    vx: 0,
+    vy: 0,
+    onGround: false,
+    facing: 1,
+    shootCd: 0,
+    invuln: 0,
+    animT: 0,
+  };
+
+  const enemies = [];
+  const bullets = [];
+  const particles = [];
+
+  function syncUI(){
+    UI.world.textContent = state.world;
+    UI.score.textContent = Math.floor(state.score);
+    UI.high.textContent = Math.floor(high);
+    UI.lives.textContent = state.lives;
+
+    if (state.boss){
+      UI.bossWrap.style.display = "";
+      UI.bossHp.textContent = state.boss.hp;
+    } else {
+      UI.bossWrap.style.display = "none";
+    }
+
+    UI.pauseBtn.textContent = paused ? "Resume" : "Pauze";
+  }
+
+  // ===== Pause UI (button + overlay) =====
+  function setPaused(v){
+    paused = v;
+    UI.overlay.classList.toggle("show", paused);
+    UI.overlay.setAttribute("aria-hidden", paused ? "false" : "true");
+    syncUI();
+  }
+  UI.pauseBtn.addEventListener("click", () => setPaused(!paused));
+  UI.resumeBtn.addEventListener("click", () => setPaused(false));
+  UI.restartBtn.addEventListener("click", () => { resetAll(); setPaused(false); });
+
+  // ===== Tile helpers =====
+  function tileAt(worldMap, tx, ty){
+    if (ty < 0 || ty >= ROWS || tx < 0 || tx >= COLS) return 0;
+    return worldMap[ty][tx];
+  }
+  function isSolid(t){
+    return t === 1 || t === 2 || t === 3 || t === 4 || t === 5;
+  }
+  function rectVsWorld(worldMap, x, y, w, h){
+    const left = Math.floor(x / TILE);
+    const right = Math.floor((x + w - 1) / TILE);
+    const top = Math.floor(y / TILE);
+    const bottom = Math.floor((y + h - 1) / TILE);
+    for (let ty=top; ty<=bottom; ty++){
+      for (let tx=left; tx<=right; tx++){
+        const t = tileAt(worldMap, tx, ty);
+        if (isSolid(t)) return true;
+      }
+    }
+    return false;
+  }
+  function collectQuestionBlocks(worldMap, px, py, pw, ph, vyPrev){
+    if (vyPrev >= 0) return;
+    const headY = py;
+    const left = Math.floor(px / TILE);
+    const right = Math.floor((px + pw - 1) / TILE);
+    const ty = Math.floor(headY / TILE);
+    for (let tx=left; tx<=right; tx++){
+      const t = tileAt(worldMap, tx, ty);
+      if (t === 3){
+        worldMap[ty][tx] = 2;
+        state.score += 25;
+        particles.push({x: tx*TILE+TILE/2, y: ty*TILE, t:0.6, text:"+25"});
+      }
+    }
+  }
+
+  // ===== Entities =====
+  function spawnEnemy(x, y){
+    enemies.push({
+      x, y, w: 30, h: 30,
+      vx: -1.2 - state.world*0.35,
+      vy: 0,
+      onGround: false,
+      alive: true,
+    });
+  }
+  function spawnBoss(){
+    state.boss = {
+      x: state.levelWidthPx - 16*TILE,
+      y: 6*TILE,
+      w: 90,
+      h: 90,
+      vx: -1.0 - state.world*0.3,
+      vy: 0,
+      onGround: false,
+      hp: 18 + state.world*8,
+      hurtCd: 0,
+    };
+    state.bossSpawned = true;
+  }
+  function shoot(){
+    if (player.shootCd > 0) return;
+    const dir = player.facing;
+    bullets.push({
+      x: player.x + player.w/2 + dir*18,
+      y: player.y + 14,
+      w: 14, h: 14,
+      vx: dir * 9.2,
+      life: 120,
+    });
+    player.shootCd = 14;
+  }
+
+  // ===== Reset / world load =====
+  function loadWorld(n){
+    state.world = n;
+    state.cameraX = 0;
+    state.boss = null;
+    state.bossSpawned = false;
+
+    player.x = 3*TILE;
+    player.y = 6*TILE;
+    player.vx = 0;
+    player.vy = 0;
+    player.onGround = false;
+    player.invuln = 45;
+
+    enemies.length = 0;
+    bullets.length = 0;
+    particles.length = 0;
+
+    for (let i=0;i<22;i++){
+      const ex = (18 + i*8 + (i%3)*3) * TILE;
+      const ey = (GROUND_Y-1)*TILE - 30;
+      if (ex < state.levelWidthPx - 30*TILE) spawnEnemy(ex, ey);
+    }
+    syncUI();
+  }
+  function resetAll(){
+    high = Number(localStorage.getItem(hiKey) || 0);
+    state.score = 0;
+    state.lives = 3;
+    loadWorld(1);
+    syncUI();
+  }
+
+  // ===== Input =====
+  window.addEventListener("keydown", (e)=>{
+    const k = e.key.toLowerCase();
+    if (["arrowleft","arrowright","arrowup"," ","p","r"].includes(k)) e.preventDefault();
+    keys.add(k);
+
+    if (k === "p") setPaused(!paused);
+    if (k === "r") { resetAll(); setPaused(false); }
+    if (k === " ") { if (!paused) shoot(); }
+  });
+  window.addEventListener("keyup", (e)=> keys.delete(e.key.toLowerCase()));
+
+  // ===== Physics step =====
+  const GRAV = 0.65;
+  const MAX_FALL = 14;
+
+  function moveWithCollisions(worldMap, ent){
+    ent.x += ent.vx;
+    if (rectVsWorld(worldMap, ent.x, ent.y, ent.w, ent.h)){
+      const step = ent.vx > 0 ? -1 : 1;
+      while (rectVsWorld(worldMap, ent.x, ent.y, ent.w, ent.h)) ent.x += step;
+      ent.vx = 0;
+    }
+
+    const vyPrev = ent.vy;
+    ent.vy = clamp(ent.vy + GRAV, -999, MAX_FALL);
+    ent.y += ent.vy;
+
+    ent.onGround = false;
+    if (rectVsWorld(worldMap, ent.x, ent.y, ent.w, ent.h)){
+      const step = ent.vy > 0 ? -1 : 1;
+      while (rectVsWorld(worldMap, ent.x, ent.y, ent.w, ent.h)) ent.y += step;
+      if (ent.vy > 0) ent.onGround = true;
+      ent.vy = 0;
+    }
+    return vyPrev;
+  }
+
+  // ===== Loop =====
+  function update(){
+    if (paused) return;
+
+    const worldMap = WORLDS[state.world-1];
+
+    // Player input
+    const left = keys.has("arrowleft") || keys.has("a");
+    const right = keys.has("arrowright") || keys.has("d");
+    const up = keys.has("arrowup") || keys.has("w");
+
+    const targetVx = left ? -4.2 : right ? 4.2 : 0;
+    player.vx = targetVx;
+
+    if (player.vx !== 0) player.facing = Math.sign(player.vx);
+    if (up && player.onGround){
+      player.vy = -12.5;
+      player.onGround = false;
+    }
+
+    if (player.shootCd > 0) player.shootCd--;
+    if (player.invuln > 0) player.invuln--;
+
+    const vyPrev = moveWithCollisions(worldMap, player);
+    collectQuestionBlocks(worldMap, player.x, player.y, player.w, player.h, vyPrev);
+
+    // Camera
+    const camTarget = player.x - 320;
+    state.cameraX = clamp(camTarget, 0, state.levelWidthPx - W);
+
+    // Spawn boss near end
+    if (!state.bossSpawned && player.x > state.levelWidthPx - 34*TILE){
+      spawnBoss();
+    }
+
+    // Enemies
+    for (let i=enemies.length-1; i>=0; i--){
+      const e = enemies[i];
+      const vxPrev = e.vx;
+      moveWithCollisions(worldMap, e);
+
+      if (e.onGround){
+        const aheadX = e.vx < 0 ? e.x - 2 : e.x + e.w + 2;
+        const footY = e.y + e.h + 2;
+        const tx = Math.floor(aheadX / TILE);
+        const ty = Math.floor(footY / TILE);
+        const under = tileAt(worldMap, tx, ty);
+        if (!isSolid(under)) e.vx *= -1;
+      }
+      if (e.vx === 0) e.vx = -vxPrev;
+
+      if (aabb(player.x,player.y,player.w,player.h, e.x,e.y,e.w,e.h)){
+        const stomp = (player.vy > 0) && (player.y + player.h - e.y) < 16;
+        if (stomp){
+          enemies.splice(i,1);
+          player.vy = -9;
+          state.score += 50;
+          particles.push({x:e.x+e.w/2,y:e.y,t:0.6,text:"+50"});
+        } else if (player.invuln <= 0){
+          state.lives -= 1;
+          player.invuln = 60;
+          particles.push({x:player.x+player.w/2,y:player.y,t:0.8,text:"-1 life"});
+          if (state.lives <= 0){
+            high = Math.max(high, Math.floor(state.score));
+            localStorage.setItem(hiKey, String(high));
+            state.score = 0;
+            state.lives = 3;
+            loadWorld(1);
+            return;
+          }
         }
+      }
+    }
 
-        if(keys[" "] && this.cooldown<=0){
-            bullets.push(new Bullet(this.x+this.w,this.y+20));
-            this.cooldown=20;
+    // Boss AI
+    if (state.boss){
+      const b = state.boss;
+      if (b.hurtCd > 0) b.hurtCd--;
+
+      const dx = player.x - b.x;
+      const desire = clamp(dx, -220, 220);
+      b.vx = desire > 20 ? (1.2 + state.world*0.25) : desire < -20 ? (-1.2 - state.world*0.25) : 0;
+
+      if (b.onGround && Math.random() < 0.015){
+        b.vy = -11.5;
+      }
+
+      moveWithCollisions(worldMap, b);
+
+      if (aabb(player.x,player.y,player.w,player.h, b.x,b.y,b.w,b.h) && player.invuln <= 0){
+        state.lives -= 1;
+        player.invuln = 75;
+        particles.push({x:player.x+player.w/2,y:player.y,t:0.8,text:"Boss hit!"});
+        if (state.lives <= 0){
+          high = Math.max(high, Math.floor(state.score));
+          localStorage.setItem(hiKey, String(high));
+          state.score = 0;
+          state.lives = 3;
+          loadWorld(1);
+          return;
         }
-        if(this.cooldown>0) this.cooldown--;
+      }
+    }
 
-        cameraX = this.x-200;
-    }
-    draw(){
-        ctx.fillStyle="white";
-        ctx.fillRect(this.x-cameraX,this.y,this.w,this.h);
-    }
-}
+    // Bullets
+    for (let i=bullets.length-1; i>=0; i--){
+      const b = bullets[i];
+      b.x += b.vx;
+      b.life--;
 
-class Enemy{
-    constructor(x){
-        this.x=x;
-        this.y=350;
-        this.w=40;
-        this.h=50;
-        this.vx=-2-world;
-    }
-    update(){
-        this.x+=this.vx;
-    }
-    draw(){
-        ctx.fillStyle="red";
-        ctx.fillRect(this.x-cameraX,this.y,this.w,this.h);
-    }
-}
+      if (rectVsWorld(worldMap, b.x, b.y, b.w, b.h) || b.life <= 0){
+        bullets.splice(i,1);
+        continue;
+      }
 
-class Bullet{
-    constructor(x,y){
-        this.x=x;
-        this.y=y;
-        this.w=10;
-        this.h=5;
-        this.vx=10;
-    }
-    update(){
-        this.x+=this.vx;
-    }
-    draw(){
-        ctx.fillStyle="yellow";
-        ctx.fillRect(this.x-cameraX,this.y,this.w,this.h);
-    }
-}
+      for (let j=enemies.length-1; j>=0; j--){
+        const e = enemies[j];
+        if (aabb(b.x,b.y,b.w,b.h, e.x,e.y,e.w,e.h)){
+          enemies.splice(j,1);
+          bullets.splice(i,1);
+          state.score += 40;
+          particles.push({x:e.x+e.w/2,y:e.y,t:0.6,text:"+40"});
+          break;
+        }
+      }
+      if (i >= bullets.length) continue;
 
-class Boss{
-    constructor(){
-        this.x=2500;
-        this.y=300;
-        this.w=120;
-        this.h=150;
-        this.hp=10+world*5;
-    }
-    update(){
-        if(this.x-player.x>100) this.x-=2;
-    }
-    draw(){
-        ctx.fillStyle="purple";
-        ctx.fillRect(this.x-cameraX,this.y,this.w,this.h);
-    }
-}
+      if (state.boss && aabb(b.x,b.y,b.w,b.h, state.boss.x,state.boss.y,state.boss.w,state.boss.h)){
+        if (state.boss.hurtCd === 0){
+          state.boss.hp -= 1;
+          state.boss.hurtCd = 8;
+          state.score += 15;
+          particles.push({x:state.boss.x+state.boss.w/2,y:state.boss.y,t:0.5,text:"-1"});
+        }
+        bullets.splice(i,1);
 
-let player = new Player();
-let enemies=[];
-let bullets=[];
-let boss=null
+        if (state.boss.hp <= 0){
+          state.score += 300;
+          particles.push({x:state.boss.x+state.boss.w/2,y:state.boss.y,t:1.0,text:"BOSS DOWN +300"});
+          state.boss = null;
+
+          if (state.world < 3){
+            loadWorld(state.world + 1);
+          } else {
+            high = Math.max(high, Math.floor(state.score));
+            localStorage.setItem(hiKey, String(high));
+            state.score = 0;
+            state.lives = 3;
+            loadWorld(1);
+          }
+        }
+      }
+    }
+
+    // Exit tile (flag) -> next world if boss not present
+    const tx = Math.floor((player.x + player.w/2) / TILE);
+    const ty = Math.floor((player.y + player.h/2) / TILE);
+    if (tileAt(worldMap, tx, ty) === 9 && !state.boss){
+      if (state.world < 3) loadWorld(state.world + 1);
+      else {
+        high = Math.max(high, Math.floor(state.score));
+        localStorage.setItem(hiKey, String(high));
+        state.score = 0;
+        state.lives = 3;
+        loadWorld(1);
+      }
+    }
+
+    // Particles
+    for (let i=particles.length-1;i>=0;i--){
+      particles[i].t -= 1/60;
+      particles[i].y -= 0.6;
+      if (particles[i].t <= 0) particles.splice(i,1);
+    }
+
+    // Highscore live
+    if (state.score > high){
+      high = Math.floor(state.score);
+      localStorage.setItem(hiKey, String(high));
+    }
+    syncUI();
+  }
+
+  // ===== Rendering =====
+  function tileAtSafe(map, x, y){
+    if (y < 0 || y >= ROWS || x < 0 || x >= COLS) return 0;
+    return map[y][x];
+  }
+  function drawTile(t, x, y){
+    if (t === 0) return;
+    if (t === 1) ctx.drawImage(IMG.ground, x, y, TILE, TILE);
+    else if (t === 2) ctx.drawImage(IMG.brick, x, y, TILE, TILE);
+    else if (t === 3) ctx.drawImage(IMG.question, x, y, TILE, TILE);
+    else if (t === 4 || t === 5){
+      ctx.drawImage(IMG.pipe, x - (x % (2*TILE)), y - (t===5 ? TILE : 0), 2*TILE, 2*TILE);
+    } else if (t === 9){
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.fillRect(x+14, y-5*TILE, 4, 6*TILE);
+      ctx.fillStyle = "rgba(255,0,0,0.95)";
+      ctx.beginPath();
+      ctx.moveTo(x+18, y-5*TILE+6);
+      ctx.lineTo(x+18+18, y-5*TILE+14);
+      ctx.lineTo(x+18, y-5*TILE+22);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function draw(){
+    ctx.drawImage(IMG.sky, 0, 0, W, H);
+
+    const cam = state.cameraX;
+    ctx.fillStyle = "rgba(0,0,0,0.08)";
+    for (let i=0;i<10;i++){
+      const hx = (i*220) - (cam*0.2 % 220);
+      ctx.beginPath();
+      ctx.ellipse(hx+140, 430, 160, 60, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    const map = WORLDS[state.world-1];
+    const startCol = Math.floor(state.cameraX / TILE);
+    const endCol = Math.ceil((state.cameraX + W) / TILE) + 1;
+
+    for (let y=0; y<ROWS; y++){
+      for (let x=startCol; x<=endCol; x++){
+        const t = tileAtSafe(map, x, y);
+        if (!t) continue;
+        const px = x*TILE - state.cameraX;
+        const py = y*TILE;
+        if ((t===4 || t===5) && (x % 2 === 1)) continue;
+        drawTile(t, px, py);
+      }
+    }
+
+    for (const e of enemies){
+      ctx.drawImage(IMG.enemy, e.x - state.cameraX - 8, e.y - 10, 46, 46);
+    }
+
+    if (state.boss){
+      const b = state.boss;
+      const wob = Math.sin(performance.now()/140) * 2;
+      ctx.globalAlpha = (b.hurtCd > 0 ? 0.65 : 1);
+      ctx.drawImage(IMG.boss, b.x - state.cameraX - 18, b.y - 28 + wob, 128, 128);
+      ctx.globalAlpha = 1;
+    }
+
+    for (const b of bullets){
+      ctx.drawImage(IMG.fireball, b.x - state.cameraX - 6, b.y - 6, 26, 26);
+    }
+
+    player.animT += (Math.abs(player.vx) > 0.2 ? 0.22 : 0.08);
+    const frame = (Math.floor(player.animT) % 2) === 0 ? IMG.rabbit1 : IMG.rabbit2;
+    const px = player.x - state.cameraX - 16;
+    const py = player.y - 20;
+
+    ctx.save();
+    ctx.translate(px + 32, py + 32);
+    ctx.scale(player.facing < 0 ? -1 : 1, 1);
+    const blink = player.invuln > 0 ? (Math.floor(player.invuln/6)%2===0) : true;
+    if (blink) ctx.drawImage(frame, -32, -32, 64, 64);
+    ctx.restore();
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 14px system-ui, Arial";
+    ctx.textAlign = "center";
+    for (const p of particles){
+      ctx.globalAlpha = clamp(p.t*1.5, 0, 1);
+      ctx.fillText(p.text, p.x - state.cameraX, p.y);
+    }
+    ctx.globalAlpha = 1;
+
+    // When paused, also show a subtle "PAUSED" text on canvas (in addition to overlay)
+    if (paused){
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.font = "800 48px system-ui, Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("PAUSED", W/2, H/2);
+    }
+  }
+
+  function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // ===== Init =====
+  UI.high.textContent = String(high);
+  loadWorld(1);
+  syncUI();
+  loop();
+})();
+</script>
+</body>
+</html>
