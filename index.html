@@ -5,54 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Rabbit Worlds Mobile</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #5cc6ff; font-family: sans-serif; touch-action: none; }
-        canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
+        body { margin: 0; overflow: hidden; background: #5cc6ff; font-family: sans-serif; touch-action: none; user-select: none; }
+        canvas { display: block; width: 100vw; height: 100vh; }
         #ui { 
-            position: fixed; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.5); 
-            padding: 10px; border-radius: 10px; pointer-events: none; font-weight: bold; font-size: 14px;
+            position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+            color: white; background: rgba(0,0,0,0.5); padding: 8px 15px;
+            border-radius: 20px; font-weight: bold; z-index: 10; display: flex; gap: 15px;
         }
-        /* Mobiele Besturing Visueel */
         .controls {
-            position: fixed; bottom: 20px; left: 20px; right: 20px;
-            display: flex; justify-content: space-between; align-items: flex-end;
-            z-index: 100; pointer-events: none;
+            position: fixed; bottom: 30px; left: 20px; right: 20px;
+            display: flex; justify-content: space-between; z-index: 100;
         }
         .btn {
-            width: 70px; height: 70px; background: rgba(255,255,255,0.3);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 30px; border: 2px solid white; pointer-events: auto;
+            width: 70px; height: 70px; background: rgba(255,255,255,0.2);
+            border: 2px solid white; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; color: white;
+            font-size: 30px; font-weight: bold; pointer-events: auto;
         }
-        .jump-btn { width: 90px; height: 90px; background: rgba(0,255,136,0.4); }
+        .jump { width: 90px; height: 90px; background: rgba(0,255,136,0.3); }
     </style>
 </head>
 <body>
 
 <div id="ui">
-    WORLD: <span id="w">1</span> | SCORE: <span id="s">0</span> | ❤️: <span id="l">3</span>
+    <span>SCORE: <span id="s">0</span></span>
+    <span>LIVES: <span id="l">3</span></span>
 </div>
 
 <div class="controls">
-    <div style="display:flex; gap:15px;">
-        <div class="btn" id="leftBtn">←</div>
-        <div class="btn" id="rightBtn">→</div>
+    <div style="display:flex; gap:10px;">
+        <div class="btn" id="lBtn">←</div>
+        <div class="btn" id="rBtn">→</div>
     </div>
-    <div class="btn jump-btn" id="jumpBtn">↑</div>
+    <div class="btn jump" id="jBtn">↑</div>
 </div>
 
 <canvas id="game"></canvas>
 
 <script>
 const canvas = document.getElementById("game"), ctx = canvas.getContext("2d");
-const W = 960, H = 540;
-let world = 1, score = 0, lives = 3, camX = 0, active = true;
-
-// Player & Game State
-const player = { x: 100, y: 300, w: 40, h: 40, vx: 0, vy: 0, onG: false, dir: 1 };
+let score = 0, lives = 3, camX = 0;
+const player = { x: 100, y: 200, w: 40, h: 40, vx: 0, vy: 0, onG: false };
 const enemies = [];
-const TILE = 40;
-
-// Input State
-let moveLeft = false, moveRight = false;
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -60,94 +54,57 @@ function resize() {
 }
 window.onresize = resize; resize();
 
-// Touch Controls
-const setupBtn = (id, start, end) => {
+let mLeft = false, mRight = false;
+const listen = (id, s, e) => {
     const el = document.getElementById(id);
-    el.addEventListener('touchstart', (e) => { e.preventDefault(); start(); });
-    el.addEventListener('touchend', (e) => { e.preventDefault(); end(); });
+    el.addEventListener('touchstart', (ev) => { ev.preventDefault(); s(); });
+    el.addEventListener('touchend', (ev) => { ev.preventDefault(); e(); });
+    el.addEventListener('mousedown', s); el.addEventListener('mouseup', e);
 };
 
-setupBtn('leftBtn', () => moveLeft = true, () => moveLeft = false);
-setupBtn('rightBtn', () => moveRight = true, () => moveRight = false);
-setupBtn('jumpBtn', () => { if(player.onG) player.vy = -15; }, () => {});
+listen('lBtn', () => mLeft = true, () => mLeft = false);
+listen('rBtn', () => mRight = true, () => mRight = false);
+listen('jBtn', () => { if(player.onG) player.vy = -14; }, () => {});
 
-// Simple Game Loop
 function update() {
-    if(!active) return;
-
-    // Movement
-    if (moveLeft) player.vx = -5;
-    else if (moveRight) player.vx = 5;
-    else player.vx = 0;
-
+    if (mLeft) player.vx = -5; else if (mRight) player.vx = 5; else player.vx *= 0.8;
     player.x += player.vx;
-    player.vy += 0.8; // Gravity
+    player.vy += 0.8;
     player.y += player.vy;
 
-    // Basic Ground Collision (Simplified for demo)
-    if (player.y > H - 80) {
-        player.y = H - 80;
-        player.vy = 0;
-        player.onG = true;
-    } else {
-        player.onG = false;
-    }
+    if (player.y > canvas.height - 80) {
+        player.y = canvas.height - 80;
+        player.vy = 0; player.onG = true;
+    } else { player.onG = false; }
 
-    // Camera follow
     camX = player.x - canvas.width / 4;
 
-    // Enemy Spawn
-    if (Math.random() < 0.01) enemies.push({x: player.x + 800, y: H-80, w: 30});
+    if (Math.random() < 0.015) enemies.push({x: player.x + canvas.width, y: canvas.height - 80});
 
     enemies.forEach((en, i) => {
         en.x -= 3;
-        // Collision
-        if (Math.abs(player.x - en.x) < 30 && Math.abs(player.y - en.y) < 30) {
-            if (player.vy > 0) { enemies.splice(i, 1); score += 50; }
-            else { lives--; player.x -= 100; }
+        if (Math.abs(player.x - en.x) < 35 && Math.abs(player.y - en.y) < 35) {
+            if (player.vy > 5) { enemies.splice(i,1); score += 50; player.vy = -10; }
+            else { lives--; enemies.splice(i,1); if(lives<=0) { score=0; lives=3; player.x=100; } }
         }
     });
-
     document.getElementById('s').innerText = score;
     document.getElementById('l').innerText = lives;
-    if(lives <= 0) location.reload();
 }
 
 function draw() {
-    ctx.clearRect(0,0,canvas.width, canvas.height);
-    ctx.save();
-    ctx.translate(-camX, 0);
-
-    // Draw Ground
-    ctx.fillStyle = "#3aa655";
-    ctx.fillRect(camX, H-40, canvas.width, 40);
-
-    // Draw Player (Rabbit placeholder)
+    ctx.fillStyle = "#5cc6ff"; ctx.fillRect(0,0,canvas.width, canvas.height);
+    ctx.save(); ctx.translate(-camX, 0);
+    ctx.fillStyle = "#3aa655"; ctx.fillRect(camX, canvas.height - 40, canvas.width, 40);
     ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, 20, 0, Math.PI*2);
-    ctx.fill();
-    // Ears
-    ctx.fillRect(player.x-15, player.y-35, 10, 20);
-    ctx.fillRect(player.x+5, player.y-35, 10, 20);
-
-    // Draw Enemies
-    ctx.fillStyle = "red";
-    enemies.forEach(en => {
-        ctx.beginPath();
-        ctx.arc(en.x, en.y, 15, 0, Math.PI*2);
-        ctx.fill();
-    });
-
+    ctx.beginPath(); ctx.arc(player.x, player.y, 20, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(player.x-12, player.y-35, 8, 20); ctx.fillRect(player.x+4, player.y-35, 8, 20);
+    ctx.fillStyle = "#ff4444";
+    enemies.forEach(en => { ctx.beginPath(); ctx.arc(en.x, en.y, 15, 0, Math.PI*2); ctx.fill(); });
     ctx.restore();
+    requestAnimationFrame(() => { update(); draw(); });
 }
-
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
-loop();
+draw();
 </script>
 </body>
 </html>
