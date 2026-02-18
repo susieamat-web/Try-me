@@ -3,26 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rabbit Worlds Mobile</title>
+    <title>Rabbit Worlds Pro Mobile</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #5cc6ff; font-family: sans-serif; touch-action: none; user-select: none; }
-        canvas { display: block; width: 100vw; height: 100vh; }
+        :root{ --btn: rgba(255,255,255,0.2); --btn-active: rgba(0,255,136,0.4); }
+        body { margin: 0; overflow: hidden; background: #7fd8ff; font-family: system-ui, sans-serif; touch-action: none; user-select: none; }
+        canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
+        
         #ui { 
-            position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
-            color: white; background: rgba(0,0,0,0.5); padding: 8px 15px;
-            border-radius: 20px; font-weight: bold; z-index: 10; display: flex; gap: 15px;
+            position: fixed; top: 15px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 20px; color: white; background: rgba(0,0,0,0.4); 
+            padding: 10px 20px; border-radius: 50px; font-weight: bold; backdrop-filter: blur(5px);
         }
+
         .controls {
             position: fixed; bottom: 30px; left: 20px; right: 20px;
-            display: flex; justify-content: space-between; z-index: 100;
+            display: flex; justify-content: space-between; align-items: flex-end;
         }
+        .d-pad { display: flex; gap: 15px; }
         .btn {
-            width: 70px; height: 70px; background: rgba(255,255,255,0.2);
-            border: 2px solid white; border-radius: 50%; display: flex;
-            align-items: center; justify-content: center; color: white;
-            font-size: 30px; font-weight: bold; pointer-events: auto;
+            width: 75px; height: 75px; background: var(--btn); border: 3px solid white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 32px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-        .jump { width: 90px; height: 90px; background: rgba(0,255,136,0.3); }
+        .btn:active { background: var(--btn-active); transform: scale(0.95); }
+        .jump { width: 95px; height: 95px; background: rgba(255,255,255,0.3); }
     </style>
 </head>
 <body>
@@ -33,20 +37,23 @@
 </div>
 
 <div class="controls">
-    <div style="display:flex; gap:10px;">
+    <div class="d-pad">
         <div class="btn" id="lBtn">←</div>
         <div class="btn" id="rBtn">→</div>
     </div>
-    <div class="btn jump" id="jBtn">↑</div>
+    <div class="btn jump" id="jBtn">JUMP</div>
 </div>
 
 <canvas id="game"></canvas>
 
 <script>
 const canvas = document.getElementById("game"), ctx = canvas.getContext("2d");
-let score = 0, lives = 3, camX = 0;
-const player = { x: 100, y: 200, w: 40, h: 40, vx: 0, vy: 0, onG: false };
+let score = 0, lives = 3, camX = 0, frame = 0;
+const TILE = 40;
+
+const player = { x: 100, y: 100, w: 40, h: 48, vx: 0, vy: 0, onG: false, facing: 1 };
 const enemies = [];
+const clouds = Array.from({length: 10}, () => ({x: Math.random()*3000, y: Math.random()*200, s: 0.5+Math.random()}));
 
 function resize() {
     canvas.width = window.innerWidth;
@@ -59,33 +66,56 @@ const listen = (id, s, e) => {
     const el = document.getElementById(id);
     el.addEventListener('touchstart', (ev) => { ev.preventDefault(); s(); });
     el.addEventListener('touchend', (ev) => { ev.preventDefault(); e(); });
-    el.addEventListener('mousedown', s); el.addEventListener('mouseup', e);
 };
-
 listen('lBtn', () => mLeft = true, () => mLeft = false);
 listen('rBtn', () => mRight = true, () => mRight = false);
-listen('jBtn', () => { if(player.onG) player.vy = -14; }, () => {});
+listen('jBtn', () => { if(player.onG) player.vy = -16; }, () => {});
+
+function drawRabbit(x, y, f, dir) {
+    ctx.save();
+    ctx.translate(x + 20, y + 24);
+    ctx.scale(dir, 1);
+    // Body
+    ctx.fillStyle = "white";
+    ctx.beginPath(); ctx.ellipse(0, 5, 18, 18, 0, 0, Math.PI*2); ctx.fill();
+    // Ears
+    const jumpY = player.onG ? 0 : -5;
+    ctx.fillRect(-12, -25 + jumpY, 8, 20); ctx.fillRect(4, -25 + jumpY, 8, 20);
+    // Face
+    ctx.fillStyle = "#22332a";
+    ctx.beginPath(); ctx.arc(8, 0, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+}
 
 function update() {
-    if (mLeft) player.vx = -5; else if (mRight) player.vx = 5; else player.vx *= 0.8;
+    if (mLeft) { player.vx = -6; player.facing = -1; }
+    else if (mRight) { player.vx = 6; player.facing = 1; }
+    else player.vx *= 0.8;
+
     player.x += player.vx;
-    player.vy += 0.8;
+    player.vy += 0.85;
     player.y += player.vy;
 
     if (player.y > canvas.height - 80) {
         player.y = canvas.height - 80;
         player.vy = 0; player.onG = true;
-    } else { player.onG = false; }
+    } else player.onG = false;
 
-    camX = player.x - canvas.width / 4;
+    camX = player.x - canvas.width / 3;
+    frame++;
 
-    if (Math.random() < 0.015) enemies.push({x: player.x + canvas.width, y: canvas.height - 80});
-
+    if (Math.random() < 0.01) enemies.push({x: player.x + canvas.width, y: canvas.height - 80, t: 0});
+    
     enemies.forEach((en, i) => {
-        en.x -= 3;
-        if (Math.abs(player.x - en.x) < 35 && Math.abs(player.y - en.y) < 35) {
-            if (player.vy > 5) { enemies.splice(i,1); score += 50; player.vy = -10; }
-            else { lives--; enemies.splice(i,1); if(lives<=0) { score=0; lives=3; player.x=100; } }
+        en.x -= 3.5;
+        en.t += 0.1;
+        if (Math.abs(player.x - en.x) < 35 && Math.abs(player.y - en.y) < 40) {
+            if (player.vy > 2) { 
+                enemies.splice(i,1); score += 100; player.vy = -12; 
+            } else { 
+                lives--; enemies.splice(i,1); 
+                if(lives <= 0) { score=0; lives=3; player.x=100; }
+            }
         }
     });
     document.getElementById('s').innerText = score;
@@ -93,14 +123,36 @@ function update() {
 }
 
 function draw() {
-    ctx.fillStyle = "#5cc6ff"; ctx.fillRect(0,0,canvas.width, canvas.height);
+    // Sky gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, "#7fd8ff"); grad.addColorStop(1, "#b8f0ff");
+    ctx.fillStyle = grad; ctx.fillRect(0,0,canvas.width, canvas.height);
+
     ctx.save(); ctx.translate(-camX, 0);
-    ctx.fillStyle = "#3aa655"; ctx.fillRect(camX, canvas.height - 40, canvas.width, 40);
+
+    // Clouds
     ctx.fillStyle = "white";
-    ctx.beginPath(); ctx.arc(player.x, player.y, 20, 0, Math.PI*2); ctx.fill();
-    ctx.fillRect(player.x-12, player.y-35, 8, 20); ctx.fillRect(player.x+4, player.y-35, 8, 20);
-    ctx.fillStyle = "#ff4444";
-    enemies.forEach(en => { ctx.beginPath(); ctx.arc(en.x, en.y, 15, 0, Math.PI*2); ctx.fill(); });
+    clouds.forEach(c => {
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath(); ctx.ellipse(c.x, c.y, 40, 20, 0, 0, Math.PI*2); ctx.fill();
+        c.x -= c.s; if(c.x < camX - 100) c.x = camX + canvas.width + 100;
+    });
+    ctx.globalAlpha = 1;
+
+    // Ground
+    ctx.fillStyle = "#3aa655"; ctx.fillRect(camX, canvas.height - 40, canvas.width, 40);
+    ctx.fillStyle = "#2b7a3f"; ctx.fillRect(camX, canvas.height - 30, canvas.width, 10);
+
+    // Enemies (Slimes)
+    enemies.forEach(en => {
+        ctx.fillStyle = "#ff4444";
+        const squash = Math.sin(en.t) * 4;
+        ctx.beginPath(); ctx.ellipse(en.x, en.y + squash, 18, 15 - squash, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "black"; ctx.fillRect(en.x - 8, en.y - 2 + squash, 4, 4); ctx.fillRect(en.x + 4, en.y - 2 + squash, 4, 4);
+    });
+
+    drawRabbit(player.x, player.y, frame, player.facing);
+
     ctx.restore();
     requestAnimationFrame(() => { update(); draw(); });
 }
