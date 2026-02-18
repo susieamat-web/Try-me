@@ -1,45 +1,34 @@
-# 🐰 Rabbit Worlds — Mini Game 3.0
+# 🐰 Rabbit Worlds — Mobile Edition
 
-![Rabbit Worlds Banner](banner.png)
 
-Welcome to **Rabbit Worlds**, a fast-paced, single-file HTML5 platformer adventure! Run, jump, and shoot your way through three unique worlds, collect points from question blocks, and defeat epic bosses to set a new high score.
 
-## 🚀 Live Demo
-Experience the game directly in your browser:
-👉 **[PLAY RABBIT WORLDS NOW](https://susieamat-web.github.io/Try-me/)**
+Welcome to **Rabbit Worlds**, a fast-paced platformer adventure designed for both **Mobile** and **Desktop**! Use the on-screen buttons to jump on enemies and reach new high scores.
 
----
-
-## ✨ Game Features
-* **Classic Platforming:** Precise jumping and movement mechanics.
-* **Three Challenging Worlds:** Progress through different environments with increasing difficulty.
-* **Boss Battles:** Face off against powerful bosses at the end of each world.
-* **Combat System:** Jump on enemies to stomp them or shoot fireballs using the Spacebar.
-* **Highscore System:** Your best scores are saved locally on your device.
-* **Clean UI:** Real-time tracking of lives, world progress, and score.
+## 🕹️ Play Now
+👉 **[CLICK HERE TO PLAY THE GAME](https://susieamat-web.github.io/Try-me/)**
 
 ---
 
-## 🕹️ How to Play
-
-### Controls
-* **Arrow Keys / WASD:** Move and Jump
-* **Spacebar:** Shoot Fireballs
-* **P:** Pause Game
-* **R:** Reset Game
-
-### Tips
-* Stomping an enemy gives you **50 points**.
-* Shooting an enemy gives you **40 points**.
-* Question blocks contain hidden bonuses (**25 points**).
-* Don't forget to defeat the boss to unlock the next world!
+## 📱 How to Play (Mobile & PC)
+* **Left/Right Arrows (on screen):** Move the Rabbit left and right.
+* **Up Arrow (on screen):** Jump to reach platforms and avoid enemies.
+* **Objective:** Stomp on the red enemies from above to gain **50 points**. 
+* **Warning:** If an enemy touches you from the side, you lose a life!
 
 ---
 
-## 🛠️ Technical Overview
-* **Language:** Pure JavaScript (ES6+), HTML5 Canvas, and CSS3.
-* **Assets:** All graphics are rendered via embedded SVG strings for maximum performance and zero external dependencies.
-* **Optimization:** Designed for smooth 60 FPS gameplay with high-DPI (Retina) display support.
+## ✨ Features
+* **Touch Controls:** Custom buttons designed for mobile gameplay.
+* **Smooth Physics:** Optimized gravity and movement for a fun experience.
+* **Dynamic Enemies:** Slime-like enemies that spawn as you progress.
+* **High-DPI Canvas:** Crisp graphics that look great on any screen.
+
+---
+
+## 🛠️ Installation & Setup
+1. Upload the `index.html` to your GitHub repository named **Try-me**.
+2. Go to **Settings > Pages** and ensure the source is set to the `main` branch.
+3. Open the link on your smartphone (best played in **Landscape/Horizontal** mode).
 
 ---
 *Developed by [susieamat-web](https://github.com/susieamat-web)*
