@@ -4,7 +4,7 @@ A fast-paced, browser-based arcade runner built with vanilla JavaScript and HTML
 
 ## 🔗 Play the Game
 You can play the game directly in your browser here:
-👉 **[CLICK HERE TO PLAY LIVE](https://jouwgebruikersnaam.github.io/jouw-repository-naam/)**
+👉 **[CLICK HERE TO (https://susieamat-web.github.io/Try-me/)**
 *(Note: Replace the link above with your actual GitHub Pages URL)*
 
 ## 🎮 How to Play
