@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rabbit Worlds: Collector Edition</title>
+    <title>Rabbit Worlds: Wood Chopper</title>
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
             margin: 0; padding: 0; background: #1a1a1a; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: white; 
+            font-family: 'Segoe UI', sans-serif; color: white; 
             overflow: hidden; touch-action: none;
             display: flex; flex-direction: column; height: 100vh;
         }
@@ -23,17 +23,24 @@
         .ui { 
             position: absolute; top: 10px; width: 100%; 
             text-align: center; pointer-events: none; 
-            font-weight: bold; font-size: 18px; text-shadow: 2px 2px #000; 
+            font-weight: bold; font-size: 18px; text-shadow: 2px 2px #000; z-index: 5;
         }
+        /* Verbeterde knoppen sectie */
         .controls { 
-            display: flex; width: 100%; height: 100px; 
-            background: #222; padding: 10px; gap: 10px;
+            display: flex; width: 100%; 
+            height: 130px; /* Iets hoger voor betere duimpositie */
+            background: #222; 
+            padding: 15px 15px 30px 15px; /* Extra ruimte aan de onderkant tegen wegvallen */
+            gap: 15px;
         }
         button { 
-            flex: 1; font-size: 20px; cursor: pointer; border-radius: 12px; 
+            flex: 1; font-size: 22px; cursor: pointer; border-radius: 15px; 
             border: none; background: #eee; font-weight: bold; color: #333;
+            box-shadow: 0 4px #999;
             -webkit-user-select: none; user-select: none;
         }
+        button:active { background: #ccc; box-shadow: 0 2px #666; transform: translateY(2px); }
+        
         #startScherm { 
             position: absolute; inset: 0; background: rgba(0,0,0,0.9); 
             z-index: 10; display: flex; flex-direction: column; 
@@ -45,9 +52,9 @@
 
 <div id="game-container">
     <div id="startScherm">
-        <h1 style="color:#ff9800">🥕 RABBIT WORLDS</h1>
-        <p id="hs-display" style="font-size: 20px;"></p>
-        <button onclick="start()" style="flex:none; padding: 15px 40px;">START GAME</button>
+        <h1 style="color:#ff9800; font-size: 40px; margin-bottom: 10px;">🥕 RABBIT WORLDS</h1>
+        <p id="hs-display" style="font-size: 20px; margin-bottom: 20px;"></p>
+        <button onclick="start()" style="flex:none; width: 200px; height: 60px;">START</button>
     </div>
     <div class="ui">
         <div id="stats-top">Level: 1 | Score: 0</div>
@@ -70,7 +77,7 @@ let highscore = parseInt(localStorage.getItem("konijnHS")) || 0;
 let highscoreName = localStorage.getItem("konijnHSName") || "Niemand";
 
 function updateHSDisplay() {
-    document.getElementById("hs-display").innerHTML = `Highscore: ${highscore}<br><small>door ${highscoreName}</small>`;
+    document.getElementById("hs-display").innerHTML = `Record: ${highscore}<br><small>door ${highscoreName}</small>`;
 }
 updateHSDisplay();
 
@@ -78,14 +85,9 @@ let speler = { x: 50, y: 310, w: 50, h: 50, dy: 0, springt: false };
 let obstakels = [], kogels = [], baas = null;
 let isShooting = false;
 
-// Kleuren per level
 const levelColors = [
-    { sky: "#87CEEB", ground: "#5d4037" }, // L1
-    { sky: "#a2d2ff", ground: "#4e342e" }, // L2
-    { sky: "#ffafcc", ground: "#3e2723" }, // L3
-    { sky: "#ffc8dd", ground: "#2d1b18" }, // L4
-    { sky: "#cdb4db", ground: "#1b0f0d" }, // L5
-    { sky: "#2b2d42", ground: "#000000" }  // Nacht
+    { sky: "#87CEEB" }, { sky: "#a2d2ff" }, { sky: "#ffafcc" },
+    { sky: "#ffc8dd" }, { sky: "#cdb4db" }, { sky: "#2b2d42" }
 ];
 
 function start() {
@@ -96,13 +98,12 @@ function start() {
     loop();
 }
 
-// Controls
 const jumpBtn = document.getElementById("jumpBtn");
 const fireBtn = document.getElementById("fireBtn");
 
 const doJump = () => { if (!speler.springt && actief) { speler.dy = -16; speler.springt = true; } };
 jumpBtn.addEventListener("touchstart", (e) => { e.preventDefault(); doJump(); });
-jumpBtn.addEventListener("mousedown", doJump);
+jumpBtn.addEventListener("mousedown", (e) => { e.preventDefault(); doJump(); });
 
 const startShoot = (e) => { e.preventDefault(); isShooting = true; };
 const stopShoot = (e) => { e.preventDefault(); isShooting = false; };
@@ -126,17 +127,14 @@ function drawCarrot(x, y) {
 }
 
 function drawLog(x, y) {
-    ctx.fillStyle = "#5d4037"; ctx.fillRect(x, y, 60, 30);
-    ctx.fillStyle = "#3e2723"; ctx.fillRect(x, y + 10, 60, 5);
+    ctx.fillStyle = "#8B4513"; ctx.fillRect(x, y, 60, 30);
+    ctx.fillStyle = "#A0522D"; ctx.fillRect(x, y + 10, 60, 5);
 }
 
 function loop() {
     if (!actief) return;
-    
-    // Kleuren updaten op basis van level
     let colorSet = levelColors[Math.min(level - 1, levelColors.length - 1)];
     canvas.style.background = colorSet.sky;
-    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     frame++;
 
@@ -149,7 +147,6 @@ function loop() {
     if (speler.y > 310) { speler.y = 310; speler.dy = 0; speler.springt = false; }
     drawRabbit(speler.x, speler.y);
 
-    // Baas logica
     if (level % 5 === 0 && !baas) {
         baas = { x: 700, y: 100, w: 100, h: 100, hp: level * 2, max: level * 2, dir: 3 };
     }
@@ -160,46 +157,36 @@ function loop() {
         ctx.fillStyle = "red"; ctx.fillRect(baas.x, baas.y - 15, (baas.hp/baas.max) * 100, 8);
     }
 
-    // Obstakels en Wortels spawnen
     if (frame % Math.max(40, 100 - level * 4) === 0 && !baas) {
         let isWortel = Math.random() > 0.4;
-        obstakels.push({ 
-            x: 850, 
-            y: isWortel ? 180 : 340, 
-            w: isWortel ? 30 : 60, 
-            h: 40, 
-            type: isWortel ? 'wortel' : 'boom' 
-        });
+        obstakels.push({ x: 850, y: isWortel ? 180 : 340, w: isWortel ? 30 : 60, h: 40, type: isWortel ? 'wortel' : 'boom' });
     }
 
     obstakels.forEach((o, i) => {
         o.x -= (6 + level);
         if (o.type === 'wortel') drawCarrot(o.x, o.y); else drawLog(o.x, o.y);
-        
-        // Collision detection
         if (speler.x < o.x + o.w && speler.x + 40 > o.x && speler.y < o.y + o.h && speler.y + 40 > o.y) {
-            if (o.type === 'wortel') {
-                carrotsCaught++;
-                score += 100;
-                obstakels.splice(i, 1);
-            } else {
-                verloren();
-            }
+            if (o.type === 'wortel') { carrotsCaught++; score += 100; obstakels.splice(i, 1); }
+            else { verloren(); }
         }
         if (o.x < -100) { obstakels.splice(i, 1); score += 10; }
     });
 
-    kogels.forEach((k, i) => {
+    kogels.forEach((k, ki) => {
         k.x += 15;
         ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(k.x, k.y, 6, 0, 7); ctx.fill();
         if (baas && k.x > baas.x && k.x < baas.x + baas.w && k.y > baas.y && k.y < baas.y + baas.h) {
-            kogels.splice(i, 1); baas.hp--;
+            kogels.splice(ki, 1); baas.hp--;
             if (baas.hp <= 0) { baas = null; score += 2000; level++; }
         }
+        obstakels.forEach((o, oi) => {
+            if (o.type === 'boom' && k.x > o.x && k.x < o.x + o.w && k.y > o.y && k.y < o.y + o.h) {
+                score += 50; obstakels.splice(oi, 1); kogels.splice(ki, 1);
+            }
+        });
     });
 
     if (score > level * 1000 && !baas) level++;
-    
     document.getElementById("stats-top").innerText = `Level: ${level} | Score: ${score}`;
     document.getElementById("stats-carrots").innerText = `Wortels: ${carrotsCaught} 🥕`;
     requestAnimationFrame(loop);
@@ -207,17 +194,20 @@ function loop() {
 
 function verloren() {
     actief = false; isShooting = false;
-    if (score > highscore) {
-        let n = prompt("🎉 NIEUWE HIGHSCORE: " + score + "! Wat is je naam?");
-        highscore = score;
-        highscoreName = n || "Anoniem";
-        localStorage.setItem("konijnHS", highscore);
-        localStorage.setItem("konijnHSName", highscoreName);
-    } else {
-        alert("Game Over!\nScore: " + score + "\nWortels gevangen: " + carrotsCaught);
-    }
-    updateHSDisplay();
-    location.reload();
+    setTimeout(() => {
+        let n = prompt(`GAME OVER!\nScore: ${score}\nWortels: ${carrotsCaught}\n\nType je naam voor de ranglijst:`);
+        let naam = n || "Onbekend";
+        
+        if (score > highscore) {
+            highscore = score;
+            highscoreName = naam;
+            localStorage.setItem("konijnHS", highscore);
+            localStorage.setItem("konijnHSName", highscoreName);
+            alert("WOW! Een nieuw record!");
+        }
+        updateHSDisplay();
+        location.reload();
+    }, 100);
 }
 </script>
 </body>
