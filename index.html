@@ -1,5 +1,3 @@
-HTML
-Copy code
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -8,87 +6,16 @@ Copy code
   <title>Rabbit Worlds: Highscore Edition</title>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-    body {
-      margin: 0;
-      background: #111;
-      font-family: sans-serif;
-      color: white;
-      overflow: hidden;
-      touch-action: none;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    #game-container {
-      flex-grow: 1;
-      position: relative;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    canvas {
-      background: #87CEEB;
-      width: 100%;
-      max-width: 800px;
-      display: block;
-      border-bottom: 5px solid #2d5a27;
-    }
-    .ui {
-      position: absolute;
-      top: 10px;
-      width: 100%;
-      padding: 0 20px;
-      display: flex;
-      justify-content: space-between;
-      pointer-events: none;
-      z-index: 10;
-      font-weight: bold;
-      text-shadow: 2px 2px #000;
-      font-size: 16px;
-    }
-    .controls {
-      display: flex;
-      width: 100%;
-      height: 130px;
-      background: #222;
-      padding: 15px;
-      gap: 15px;
-    }
-    .btn {
-      flex: 1;
-      font-size: 24px;
-      cursor: pointer;
-      border-radius: 15px;
-      border: none;
-      font-weight: bold;
-      color: #333;
-      background: #eee;
-      box-shadow: 0 5px #000;
-    }
+    body { margin: 0; background: #111; font-family: sans-serif; color: white; overflow: hidden; touch-action: none; height: 100vh; display: flex; flex-direction: column; }
+    #game-container { flex-grow: 1; position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
+    canvas { background: #87CEEB; width: 100%; max-width: 800px; display: block; border-bottom: 5px solid #2d5a27; }
+    .ui { position: absolute; top: 10px; width: 100%; padding: 0 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; font-weight: bold; text-shadow: 2px 2px #000; font-size: 16px; }
+    .controls { display: flex; width: 100%; height: 130px; background: #222; padding: 15px; gap: 15px; }
+    .btn { flex: 1; font-size: 24px; cursor: pointer; border-radius: 15px; border: none; font-weight: bold; color: #333; background: #eee; box-shadow: 0 5px #000; }
     .btn:active { transform: translateY(3px); box-shadow: 0 2px #000; }
-    #overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.85);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
-      text-align: center;
-    }
-    .start-btn {
-      padding: 20px 50px;
-      background: orange;
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 26px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 4px #b37400;
-    }
+    #overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; text-align: center; padding: 20px; }
+    .start-btn { padding: 18px 44px; background: orange; color: white; border: none; border-radius: 12px; font-size: 26px; font-weight: bold; cursor: pointer; box-shadow: 0 4px #b37400; }
+    .sub { opacity: 0.9; margin-top: 10px; max-width: 520px; }
   </style>
 </head>
 <body>
@@ -96,12 +23,13 @@ Copy code
 <div id="game-container">
   <div class="ui">
     <div>Score: <span id="s">0</span> | 🥕: <span id="c">0</span></div>
-    <div>Record: <span id="hs">0</span> | Lvl: <span id="l">1</span></div>
+    <div>Highscore: <span id="hs">0</span> | Lvl: <span id="l">1</span></div>
   </div>
 
   <div id="overlay">
     <h1 id="ot" style="color: orange; margin: 0; font-size: 45px;">RABBIT WORLDS</h1>
-    <p id="os" style="margin-bottom: 20px;">Versla de kat en verzamel wortels!</p>
+    <p id="os" class="sub">Spring over boomstammen, pak wortels en versla de baas op level 2, 5, 7 en 10.</p>
+    <p id="oh" class="sub" style="margin-top:0;">Highscore: <span id="ohs">0</span></p>
     <button class="start-btn" id="startBtn">START</button>
   </div>
 
@@ -114,26 +42,54 @@ Copy code
 </div>
 
 <script>
+  // ===== Canvas (scherper op mobiel) =====
   const canvas = document.getElementById("g");
   const ctx = canvas.getContext("2d");
 
+  function setupCanvasDPR() {
+    const cssW = 800, cssH = 400; // we tekenen op deze logische size
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.width = cssW + "px";
+    canvas.style.height = cssH + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  setupCanvasDPR();
+
+  // ===== UI elements =====
   const elS = document.getElementById("s");
   const elC = document.getElementById("c");
   const elL = document.getElementById("l");
   const elHS = document.getElementById("hs");
+  const elOHS = document.getElementById("ohs");
   const overlay = document.getElementById("overlay");
   const overlayTitle = document.getElementById("ot");
   const overlaySub = document.getElementById("os");
   const startBtn = document.getElementById("startBtn");
 
+  // ===== Game state =====
   let running = false;
-  let score, carrots, level, frame, p, stones, logs, items, cat;
+  let score = 0, carrots = 0, level = 1, frame = 0;
+  let p, stones, logs, items, boss;
 
-  // FIX 1: highscore altijd als number
-  let highscore = Number(localStorage.getItem("rabbit_highscore")) || 0;
+  // Highscore (werkt op GitHub Pages, blijft lokaal per browser)
+  const HIGHSCORE_KEY = "rabbit_highscore_v2";
+  let highscore = Number(localStorage.getItem(HIGHSCORE_KEY)) || 0;
   elHS.innerText = highscore;
+  elOHS.innerText = highscore;
 
-  function setup() {
+  // Boss only on these levels:
+  const bossLevels = new Set([2, 5, 7, 10]);
+  const bossDefeated = {}; // level -> true
+
+  // Spawn pattern (afwisselen van plek)
+  const logLanesY = [335, 305];            // boomstammen wisselen tussen 2 hoogtes
+  const carrotLanesY = [120, 170, 220, 270, 320]; // wortels wisselen tussen meerdere hoogtes
+  let logLaneToggle = 0;
+  let carrotLaneIndex = 0;
+
+  function resetRun() {
     score = 0;
     carrots = 0;
     level = 1;
@@ -142,13 +98,18 @@ Copy code
     stones = [];
     logs = [];
     items = [];
-    cat = null;
+    boss = null;
 
-    p = { x: 60, y: 310, dy: 0, jumping: false };
+    logLaneToggle = 0;
+    carrotLaneIndex = 0;
+
+    for (const k in bossDefeated) delete bossDefeated[k];
+
+    p = { x: 60, y: 310, dy: 0, jumping: false, w: 40, h: 40 };
 
     overlay.style.display = "none";
     overlayTitle.innerText = "RABBIT WORLDS";
-    overlaySub.innerText = "Versla de kat en verzamel wortels!";
+    overlaySub.innerText = "Spring over boomstammen, pak wortels en versla de baas op level 2, 5, 7 en 10.";
 
     if (!running) {
       running = true;
@@ -156,17 +117,22 @@ Copy code
     }
   }
 
-  function gameOver() {
+  function endGame() {
     running = false;
+
     if (score > highscore) {
       highscore = score;
-      localStorage.setItem("rabbit_highscore", String(score));
+      localStorage.setItem(HIGHSCORE_KEY, String(score));
     }
     elHS.innerText = highscore;
+    elOHS.innerText = highscore;
+
     overlay.style.display = "flex";
     overlayTitle.innerText = "GAME OVER";
+    overlaySub.innerText = "Druk op START om opnieuw te spelen.";
   }
 
+  // ===== Controls =====
   const doJump = (e) => {
     e.preventDefault();
     if (!running) return;
@@ -179,171 +145,200 @@ Copy code
   const doFire = (e) => {
     e.preventDefault();
     if (!running) return;
-    stones.push({ x: p.x + 40, y: p.y + 20 });
+    stones.push({ x: p.x + 40, y: p.y + 20, r: 10 });
   };
 
-  // Buttons (mouse + touch)
   const jb = document.getElementById("jb");
   const fb = document.getElementById("fb");
-
   jb.addEventListener("mousedown", doJump);
   jb.addEventListener("touchstart", doJump, { passive: false });
-
   fb.addEventListener("mousedown", doFire);
   fb.addEventListener("touchstart", doFire, { passive: false });
+  startBtn.addEventListener("click", resetRun);
 
-  startBtn.addEventListener("click", setup);
-
+  // ===== Drawing =====
   function drawRabbit(x, y) {
     ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.ellipse(x + 20, y + 25, 18, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(x + 30, y + 12, 10, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "pink";
-    ctx.fillRect(x + 26, y - 8, 4, 15);
-    ctx.fillRect(x + 34, y - 8, 4, 15);
-  }
-
-  function drawCat(x, y) {
-    ctx.fillStyle = "#333";
-    ctx.beginPath();
-    ctx.arc(x + 40, y + 40, 35, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(x + 15, y + 15);
-    ctx.lineTo(x + 30, y + 15);
-    ctx.lineTo(x + 22, y + 35);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(x + 50, y + 15);
-    ctx.lineTo(x + 65, y + 15);
-    ctx.lineTo(x + 57, y + 35);
-    ctx.fill();
-
-    ctx.fillStyle = "yellow";
-    ctx.fillRect(x + 28, y + 35, 6, 6);
-    ctx.fillRect(x + 46, y + 35, 6, 6);
-
-    // HP-bar
-    ctx.fillStyle = "red";
-    ctx.fillRect(x, y - 15, (cat.hp / cat.max) * 80, 6);
+    ctx.beginPath(); ctx.ellipse(x + 20, y + 25, 18, 14, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 30, y + 12, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "pink"; ctx.fillRect(x + 26, y - 8, 4, 15); ctx.fillRect(x + 34, y - 8, 4, 15);
   }
 
   function drawLog(x, y) {
-    ctx.fillStyle = "#8B4513";
-    ctx.fillRect(x, y, 60, 40);
-    ctx.fillStyle = "#5D2E0A";
-    ctx.fillRect(x, y + 15, 60, 4);
+    ctx.fillStyle = "#8B4513"; ctx.fillRect(x, y, 60, 40);
+    ctx.fillStyle = "#5D2E0A"; ctx.fillRect(x, y + 15, 60, 4);
   }
 
+  function drawCarrot(x, y) {
+    ctx.fillStyle = "orange";
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 20, y);
+    ctx.lineTo(x + 10, y + 25);
+    ctx.fill();
+  }
+
+  function spawnBossForLevel(lvl) {
+    // eenvoudige "baas" (kat) met HP-bar
+    boss = { x: 640, y: 70, w: 80, h: 80, hp: 14 + Math.floor(lvl * 1.5), max: 14 + Math.floor(lvl * 1.5), dir: 3 + Math.min(3, Math.floor(lvl / 3)) };
+  }
+
+  function drawBoss(b) {
+    ctx.fillStyle = "#333";
+    ctx.beginPath(); ctx.arc(b.x + 40, b.y + 40, 35, 0, Math.PI * 2); ctx.fill();
+
+    ctx.beginPath(); ctx.moveTo(b.x + 15, b.y + 15); ctx.lineTo(b.x + 30, b.y + 15); ctx.lineTo(b.x + 22, b.y + 35); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(b.x + 50, b.y + 15); ctx.lineTo(b.x + 65, b.y + 15); ctx.lineTo(b.x + 57, b.y + 35); ctx.fill();
+
+    ctx.fillStyle = "yellow"; ctx.fillRect(b.x + 28, b.y + 35, 6, 6); ctx.fillRect(b.x + 46, b.y + 35, 6, 6);
+
+    // HP bar
+    ctx.fillStyle = "red";
+    ctx.fillRect(b.x, b.y - 15, (b.hp / b.max) * 80, 6);
+  }
+
+  // ===== Collision =====
+  function rectHit(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+
+  // ===== Main loop =====
   function loop() {
     if (!running) return;
 
+    // clear (we tekenen op 800x400 logische coords)
     ctx.clearRect(0, 0, 800, 400);
     frame++;
 
-    // physics
+    // physics player
     p.dy += 0.8;
     p.y += p.dy;
-    if (p.y > 310) {
-      p.y = 310;
-      p.dy = 0;
-      p.jumping = false;
+    if (p.y > 310) { p.y = 310; p.dy = 0; p.jumping = false; }
+
+    // spawn boss ONLY on level 2,5,7,10 (en maar 1x per level)
+    if (bossLevels.has(level) && !bossDefeated[level] && !boss) {
+      // tijdens baas: verwijder bestaande obstacles zodat het eerlijk blijft
+      logs.length = 0;
+      items.length = 0;
+      spawnBossForLevel(level);
     }
+
+    // spawns (alleen als er geen baas actief is)
+    if (!boss) {
+      const logEvery = Math.max(34, 95 - level * 6); // snelheid/difficulty
+      if (frame % logEvery === 0) {
+        const laneY = logLanesY[logLaneToggle % logLanesY.length];
+        logLaneToggle++;
+        logs.push({ x: 850, y: laneY, w: 60, h: 40 });
+      }
+
+      // wortels: wissel plek/lane af
+      if (frame % 150 === 0) {
+        const y = carrotLanesY[carrotLaneIndex % carrotLanesY.length];
+        carrotLaneIndex++;
+        items.push({ x: 850, y, w: 25, h: 30 });
+      }
+    }
+
+    // draw player
     drawRabbit(p.x, p.y);
 
-    // cat boss
-    if (level >= 3 && !cat) cat = { x: 650, y: 100, hp: 12, max: 12, dir: 3 };
-    if (cat) {
-      cat.y += cat.dir;
-      if (cat.y > 280 || cat.y < 20) cat.dir *= -1;
-      drawCat(cat.x, cat.y);
-    }
-
-    // spawns
-    if (frame % Math.max(30, 95 - level * 7) === 0 && !cat) logs.push({ x: 850, y: 335 });
-    if (frame % 160 === 0) items.push({ x: 850, y: 160 + Math.random() * 80 });
-
-    // FIX 2: splice veilig -> achterwaarts loopen
+    // move & draw logs + collision
     for (let i = logs.length - 1; i >= 0; i--) {
       const l = logs[i];
       l.x -= (6 + level);
       drawLog(l.x, l.y);
 
-      if (p.x < l.x + 50 && p.x + 35 > l.x && p.y < l.y + 35 && p.y + 35 > l.y) {
-        gameOver();
+      if (rectHit(p.x, p.y, 35, 35, l.x, l.y, 60, 40)) {
+        endGame();
         return;
       }
-      if (l.x < -100) logs.splice(i, 1);
+      if (l.x < -120) logs.splice(i, 1);
     }
 
+    // move & draw carrots
     for (let i = items.length - 1; i >= 0; i--) {
       const it = items[i];
       it.x -= 5;
+      drawCarrot(it.x, it.y);
 
-      ctx.fillStyle = "orange";
-      ctx.beginPath();
-      ctx.moveTo(it.x, it.y);
-      ctx.lineTo(it.x + 20, it.y);
-      ctx.lineTo(it.x + 10, it.y + 25);
-      ctx.fill();
-
-      if (p.x < it.x + 30 && p.x + 40 > it.x && p.y < it.y + 30 && p.y + 40 > it.y) {
+      if (rectHit(p.x, p.y, 40, 40, it.x, it.y, it.w, it.h)) {
         carrots++;
         score += 100;
         items.splice(i, 1);
-      } else if (it.x < -50) {
+      } else if (it.x < -60) {
         items.splice(i, 1);
       }
     }
 
+    // boss movement
+    if (boss) {
+      boss.y += boss.dir;
+      if (boss.y > 280 || boss.y < 20) boss.dir *= -1;
+      drawBoss(boss);
+    }
+
+    // stones
     for (let i = stones.length - 1; i >= 0; i--) {
       const s = stones[i];
       s.x += 12;
 
       ctx.fillStyle = "#555";
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 10, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
 
       let hit = false;
 
       // hit logs
       for (let j = logs.length - 1; j >= 0; j--) {
         const l = logs[j];
-        if (s.x > l.x - 10 && s.x < l.x + 70 && s.y > l.y - 10 && s.y < l.y + 50) {
+        if (rectHit(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2, l.x, l.y, l.w, l.h)) {
           logs.splice(j, 1);
-          hit = true;
           score += 50;
+          hit = true;
           break;
         }
       }
 
-      // hit cat
-      if (!hit && cat && s.x > cat.x && s.x < cat.x + 80 && s.y > cat.y && s.y < cat.y + 80) {
-        cat.hp--;
-        hit = true;
-        if (cat.hp <= 0) {
-          cat = null;
-          score += 1000;
-          level++;
+      // hit boss
+      if (!hit && boss) {
+        if (rectHit(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2, boss.x, boss.y, boss.w, boss.h)) {
+          boss.hp--;
+          hit = true;
+          score += 25;
+
+          if (boss.hp <= 0) {
+            bossDefeated[level] = true;
+            boss = null;
+            score += 1000;
+
+            // na baas meteen door naar volgende level
+            level++;
+          }
         }
       }
 
-      if (hit || s.x > 850) stones.splice(i, 1);
+      if (hit || s.x > 900) stones.splice(i, 1);
     }
 
-    // level up
-    if (score >= level * 1000 && !cat) level++;
+    // level up (NIET tijdens baas-levels totdat baas verslagen is)
+    // - normale levels: score threshold
+    // - baas-levels: level gaat pas omhoog na baas
+    if (!bossLevels.has(level)) {
+      if (score >= level * 1000) level++;
+    } else {
+      // als baas-level al verslagen is, dan weer normaal door kunnen
+      if (bossDefeated[level] && score >= level * 1000) level++;
+    }
 
-    // ui
+    // highscore live bijwerken (zodat je ziet dat je record “in zicht” is)
+    if (score > highscore) {
+      // we slaan pas op bij game over, maar tonen alvast
+      elHS.innerText = score;
+    } else {
+      elHS.innerText = highscore;
+    }
+
+    // UI
     elS.innerText = score;
     elC.innerText = carrots;
     elL.innerText = level;
