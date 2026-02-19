@@ -3,35 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rabbit Adventure: Carrot Quest</title>
+    <title>Rabbit Adventure: GitHub Edition</title>
     <style>
         body { margin: 0; text-align: center; background: #1a1a1a; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
-        canvas { display: block; margin: 0 auto; border-bottom: 12px solid #388e3c; transition: background 1.5s ease; }
-        
-        /* Zachtere UI elementen */
-        .ui-layer { color: white; position: absolute; top: 15px; width: 100%; pointer-events: none; text-shadow: 1px 1px 5px rgba(0,0,0,0.5); }
-        
+        canvas { display: block; margin: 0 auto; border-bottom: 15px solid #2e7d32; transition: background 1.5s ease; }
+        .ui-layer { color: white; position: absolute; top: 15px; width: 100%; pointer-events: none; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
         .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 20px; }
-        
         button { 
             padding: 12px 25px; font-size: 15px; cursor: pointer; pointer-events: auto;
-            border-radius: 50px; border: 1px solid rgba(255,255,255,0.3); 
+            border-radius: 50px; border: 1px solid rgba(255,255,255,0.4); 
             background: rgba(255, 255, 255, 0.15); color: white; font-weight: 500;
-            backdrop-filter: blur(10px); transition: all 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            backdrop-filter: blur(12px); transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             text-transform: uppercase; letter-spacing: 1px;
         }
-        button:hover { background: rgba(255,255,255,0.25); transform: translateY(-2px); }
-        button:active { transform: translateY(0); }
-
-        #menu { position: absolute; inset: 0; background: rgba(20,20,20,0.9); display: flex; 
+        button:hover { background: rgba(255,255,255,0.3); transform: translateY(-3px); }
+        #menu { position: absolute; inset: 0; background: rgba(15,15,15,0.95); display: flex; 
                 flex-direction: column; align-items: center; justify-content: center; color: white; z-index: 10; }
     </style>
 </head>
 <body>
 
 <div id="menu">
-    <h1 style="font-size: 3.5em; margin-bottom: 5px; color: #ffca28;">🥕 RABBIT ADVENTURE</h1>
-    <p id="highscore-display" style="font-size: 1.1em; opacity: 0.8;">Highscore: 0</p>
+    <h1 style="font-size: 3.5em; margin-bottom: 5px; color: #ffca28; letter-spacing: -2px;">🥕 RABBIT ADVENTURE</h1>
+    <p id="highscore-display" style="font-size: 1.1em; opacity: 0.7;">Highscore: 0</p>
     <div style="display: flex; gap: 15px; margin-top: 30px;">
         <button onclick="startGame(1)">1 Speler</button>
         <button onclick="startGame(2)">2 Spelers</button>
@@ -39,9 +33,9 @@
 </div>
 
 <div class="ui-layer">
-    <div style="background: rgba(0,0,0,0.3); display: inline-block; padding: 10px 30px; border-radius: 30px;">
-        <span id="stats">Level: 1 | Punten: 0</span>
-        <div id="player-indicator" style="font-size: 0.8em; margin-top: 5px; color: #ffeb3b;"></div>
+    <div style="background: rgba(0,0,0,0.4); display: inline-block; padding: 10px 40px; border-radius: 50px;">
+        <span id="stats" style="font-weight: bold; font-size: 1.2em;">Level: 1 | Score: 0</span>
+        <div id="player-indicator" style="font-size: 0.9em; margin-top: 5px; color: #ffeb3b;"></div>
     </div>
 </div>
 
@@ -54,24 +48,46 @@
 <canvas id="gameCanvas"></canvas>
 
 <script>
+// --- AUDIO ENGINE ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(freq, type, duration, vol = 0.1, slide = 0) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if (slide !== 0) osc.frequency.exponentialRampToValueAtTime(slide, audioCtx.currentTime + duration);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + duration);
+}
+
+const SFX = {
+    jump: () => playSound(220, 'sine', 0.2, 0.1, 550),
+    shoot: () => playSound(180, 'square', 0.1, 0.04, 60),
+    hit: () => playSound(900, 'sine', 0.1, 0.1, 1300),
+    levelUp: () => { playSound(440, 'triangle', 0.1, 0.1); setTimeout(() => playSound(554, 'triangle', 0.1, 0.1), 100); },
+    buzzer: () => { playSound(110, 'sawtooth', 0.5, 0.2, 70); }
+};
+
+// --- GAME ENGINE ---
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-canvas.width = 800;
-canvas.height = 400;
+canvas.width = 800; canvas.height = 400;
 
-let gameActive = false, paused = false;
-let score = 0, level = 1, frame = 0;
+const GROUND_Y = 320; 
+let gameActive = false, paused = false, score = 0, level = 1, frame = 0;
 let players = 1, currentPlayer = 1, p1Score = 0;
 let highScore = localStorage.getItem("rabbitHighscore") || "0 (Geen)";
+const bgColors = ["#4FC3F7", "#29B6F6", "#039BE5", "#0277BD", "#01579B"];
 
 document.getElementById("highscore-display").innerText = "Highscore: " + highScore;
 
-let rabbit = { x: 70, y: 300, w: 40, h: 40, dy: 0, jumping: false };
+let rabbit = { x: 80, y: GROUND_Y, w: 40, h: 40, dy: 0, jumping: false };
 let obstacles = [], bullets = [], boss = null;
 
-const bgColors = ["#4FC3F7", "#29B6F6", "#039BE5", "#0277BD", "#01579B"];
-
 function startGame(num) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
     players = num; currentPlayer = 1; p1Score = 0;
     resetLevel(true);
     document.getElementById("menu").style.display = "none";
@@ -81,149 +97,46 @@ function startGame(num) {
 
 function resetLevel(full) {
     if(full) { score = 0; level = 1; }
-    rabbit.y = 300; rabbit.dy = 0;
+    rabbit.y = GROUND_Y; rabbit.dy = 0;
     obstacles = []; bullets = []; boss = null; frame = 0;
     document.getElementById("player-indicator").innerText = players === 2 ? "Beurt: Speler " + currentPlayer : "";
 }
 
 function drawRabbit() {
-    ctx.save();
-    ctx.translate(rabbit.x, rabbit.y);
-    // Oren
+    ctx.save(); ctx.translate(rabbit.x, rabbit.y);
     ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.ellipse(25, -5, 5, 15, 0.1, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(35, -5, 5, 15, -0.1, 0, Math.PI * 2); ctx.fill();
-    // Lichaam & Hoofd
-    ctx.beginPath(); ctx.ellipse(20, 25, 20, 16, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(32, 10, 13, 0, Math.PI * 2); ctx.fill();
+    // Oren (Rond)
+    ctx.beginPath(); ctx.ellipse(22, -10, 6, 18, 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(32, -10, 6, 18, -0.1, 0, Math.PI * 2); ctx.fill();
+    // Lichaam
+    ctx.beginPath(); ctx.ellipse(20, 15, 22, 18, 0, 0, Math.PI * 2); ctx.fill();
+    // Hoofd
+    ctx.beginPath(); ctx.arc(32, 2, 14, 0, Math.PI * 2); ctx.fill();
     // Oog
-    ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(38, 8, 2, 0, 7); ctx.fill();
+    ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(38, 0, 2.5, 0, 7); ctx.fill();
     ctx.restore();
 }
 
 function drawCarrot(x, y) {
-    // Wortel lichaam
-    ctx.fillStyle = "#FF9800";
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.quadraticCurveTo(x + 15, y - 5, x + 30, y);
-    ctx.lineTo(x + 15, y + 35);
-    ctx.closePath(); ctx.fill();
-    // Groen loof
-    ctx.fillStyle = "#4CAF50";
-    ctx.fillRect(x + 10, y - 10, 4, 10);
-    ctx.fillRect(x + 16, y - 12, 4, 12);
+    ctx.fillStyle = "#FF9800"; ctx.beginPath(); 
+    ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 15, y - 8, x + 30, y);
+    ctx.lineTo(x + 15, y + 38); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#4CAF50"; ctx.fillRect(x + 12, y - 12, 5, 12);
 }
 
 function drawBush(x, y) {
-    ctx.fillStyle = "#2E7D32";
-    for(let i=0; i<3; i++) {
-        ctx.beginPath(); ctx.arc(x + 10 + (i*10), y + 15, 15, 0, Math.PI*2); ctx.fill();
-    }
-    // Stekels
     ctx.fillStyle = "#1B5E20";
-    ctx.beginPath(); ctx.moveTo(x+5, y+5); ctx.lineTo(x+15, y-5); ctx.lineTo(x+25, y+5); ctx.fill();
-}
-
-function drawBoss() {
-    if (!boss) return;
-    ctx.fillStyle = "#5E35B1"; // Grote paarse "Monster Wortel"
-    ctx.beginPath(); ctx.rect(boss.x, boss.y, boss.w, boss.h); ctx.fill();
-    // Boze ogen
-    ctx.fillStyle = "white"; ctx.fillRect(boss.x + 15, boss.y + 20, 15, 15); ctx.fillRect(boss.x + 50, boss.y + 20, 15, 15);
-    ctx.fillStyle = "red"; ctx.fillRect(boss.x + 20, boss.y + 25, 5, 5); ctx.fillRect(boss.x + 55, boss.y + 25, 5, 5);
-    // HP Bar
-    ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fillRect(boss.x, boss.y - 20, boss.w, 8);
-    ctx.fillStyle = "#ff1744"; ctx.fillRect(boss.x, boss.y - 20, (boss.hp/boss.maxHp) * boss.w, 8);
+    ctx.beginPath(); ctx.arc(x + 10, y + 25, 15, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 25, y + 20, 18, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 40, y + 25, 15, 0, Math.PI*2); ctx.fill();
 }
 
 function update() {
     if (!gameActive || paused) return;
-    
-    let colorIndex = Math.min(Math.floor((level-1)/4), 4);
-    canvas.style.background = bgColors[colorIndex];
-    
+    canvas.style.background = bgColors[Math.min(Math.floor((level-1)/4), 4)];
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     frame++;
 
-    if (rabbit.y < 300) { rabbit.dy += 0.8; } else { rabbit.y = 300; rabbit.jumping = false; }
-    rabbit.y += rabbit.dy;
-    drawRabbit();
-
-    if (level === 10 && !boss) boss = { x: 600, y: 150, w: 90, h: 120, hp: 5, maxHp: 5, dir: 1 };
-    if (level === 20 && !boss) boss = { x: 600, y: 100, w: 120, h: 150, hp: 10, maxHp: 10, dir: 1.5 };
-
-    if (boss) {
-        boss.y += boss.dir * 3;
-        if (boss.y > 200 || boss.y < 50) boss.dir *= -1;
-        drawBoss();
-    }
-
-    // Spawn obstacles
-    if (frame % Math.max(30, 100 - (level * 2)) === 0 && !boss) {
-        let isAir = Math.random() > 0.5;
-        obstacles.push({ x: 850, y: isAir ? 200 : 330, w: 30, h: 30, type: isAir ? 'air' : 'ground' });
-    }
-
-    obstacles.forEach((obs, i) => {
-        obs.x -= (5 + level * 0.5);
-        if (obs.type === 'air') drawCarrot(obs.x, obs.y); else drawBush(obs.x, obs.y);
-        
-        if (rabbit.x < obs.x + obs.w && rabbit.x + 35 > obs.x && rabbit.y < obs.y + obs.h && rabbit.y + 35 > obs.y) gameOver();
-        if (obs.x < -50) { obstacles.splice(i, 1); score += 15; }
-    });
-
-    bullets.forEach((b, bi) => {
-        b.x += 10;
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill();
-        
-        // Hit boss
-        if (boss && b.x > boss.x && b.x < boss.x + boss.w && b.y > boss.y && b.y < boss.y + boss.h) {
-            bullets.splice(bi, 1); boss.hp--;
-            if (boss.hp <= 0) { score += 1000; boss = null; level++; if(level > 20) winGame(); }
-        }
-        // Hit air carrot
-        obstacles.forEach((obs, oi) => {
-            if (obs.type === 'air' && b.x > obs.x && b.x < obs.x + obs.w && b.y > obs.y && b.y < obs.y + obs.h) {
-                obstacles.splice(oi, 1); bullets.splice(bi, 1); score += 50;
-            }
-        });
-    });
-
-    if (score >= level * 600 && !boss && level < 21) level++;
-    document.getElementById("stats").innerText = `Level: ${level} | Punten: ${score}`;
-    requestAnimationFrame(update);
-}
-
-function jump() { if (!rabbit.jumping) { rabbit.dy = -15; rabbit.jumping = true; } }
-function shoot() { bullets.push({ x: rabbit.x + 40, y: rabbit.y + 15 }); }
-function togglePause() { paused = !paused; if (!paused) update(); }
-
-function gameOver() {
-    gameActive = false;
-    if (players === 2 && currentPlayer === 1) {
-        p1Score = score; currentPlayer = 2;
-        alert("Speler 1 af! Score: " + p1Score + ". Nu Speler 2.");
-        resetLevel(); gameActive = true; update();
-    } else {
-        let final = players === 2 ? Math.max(p1Score, score) : score;
-        checkHS(final);
-    }
-}
-
-function winGame() { gameActive = false; checkHS(score); alert("GEWONNEN! Je hebt alle wortels verzameld."); }
-
-function checkHS(s) {
-    if (s > parseInt(highScore) || highScore.includes("Geen")) {
-        let name = prompt("NIEUWE HIGHSCORE: " + s + "! Je naam:");
-        localStorage.setItem("rabbitHighscore", s + " (" + (name || "Konijn") + ")");
-    }
-    location.reload();
-}
-
-window.addEventListener("keydown", (e) => { 
-    if(e.code === "Space") jump(); if(e.code === "KeyF") shoot(); if(e.code === "KeyP") togglePause(); 
-});
-</script>
-</body>
-</html>
+    // Gravity & Ground Level
+    if (rabbit.y < GROUND_Y) { rabbit.dy += 0.8; } 
+    else { rabbit.
