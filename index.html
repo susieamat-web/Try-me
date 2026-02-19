@@ -8,7 +8,7 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
             margin: 0; padding: 0; background: #1a1a1a; 
-            font-family: 'Segoe UI', sans-serif; color: white; 
+            font-family: sans-serif; color: white; 
             overflow: hidden; touch-action: none;
             display: flex; flex-direction: column; height: 100vh;
         }
@@ -18,7 +18,7 @@
         }
         canvas { 
             display: block; max-width: 100%; max-height: 100%; 
-            object-fit: contain; transition: background 0.5s;
+            object-fit: contain; background: #87CEEB;
         }
         .ui { 
             position: absolute; top: 10px; width: 100%; 
@@ -44,7 +44,7 @@
         #startScherm { display: flex; }
         .pause-btn {
             position: absolute; top: 10px; right: 10px; width: 50px; height: 50px;
-            z-index: 20; font-size: 20px; padding: 0; flex: none;
+            z-index: 20; font-size: 20px; padding: 0; flex: none; pointer-events: auto;
         }
     </style>
 </head>
@@ -99,14 +99,14 @@ function start() {
     document.getElementById("startScherm").style.display = "none";
     actief = true; gepauzeerd = false; score = 0; level = 1; carrotsCaught = 0;
     obstakels = []; kogels = []; baas = null; speler.y = 310;
-    loop();
+    requestAnimationFrame(loop);
 }
 
 function togglePauze() {
     if (!actief) return;
     gepauzeerd = !gepauzeerd;
     document.getElementById("pauzeScherm").style.display = gepauzeerd ? "flex" : "none";
-    if (!gepauzeerd) loop();
+    if (!gepauzeerd) requestAnimationFrame(loop);
 }
 
 const jumpBtn = document.getElementById("jumpBtn");
@@ -116,7 +116,7 @@ const doJump = () => { if (!speler.springt && actief && !gepauzeerd) { speler.dy
 jumpBtn.addEventListener("touchstart", (e) => { e.preventDefault(); doJump(); });
 jumpBtn.addEventListener("mousedown", (e) => { e.preventDefault(); doJump(); });
 
-const startShoot = (e) => { e.preventDefault(); if(!gepauzeerd) isShooting = true; };
+const startShoot = (e) => { e.preventDefault(); if(actief && !gepauzeerd) isShooting = true; };
 const stopShoot = (e) => { e.preventDefault(); isShooting = false; };
 fireBtn.addEventListener("touchstart", startShoot);
 fireBtn.addEventListener("touchend", stopShoot);
@@ -126,127 +126,4 @@ fireBtn.addEventListener("mouseup", stopShoot);
 function drawRabbit(x, y) {
     ctx.fillStyle = "white";
     ctx.beginPath(); ctx.ellipse(x + 25, y + 30, 20, 15, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 35, y + 15, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "pink"; ctx.fillRect(x + 30, y - 10, 6, 20); ctx.fillRect(x + 40, y - 10, 6, 20);
-}
-
-function drawStone(x, y) {
-    ctx.fillStyle = "#808080"; // Grijs
-    ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#A9A9A9"; // Lichter detail
-    ctx.beginPath(); ctx.arc(x - 2, y - 2, 3, 0, Math.PI * 2); ctx.fill();
-}
-
-function drawLion(x, y) {
-    // Manen
-    ctx.fillStyle = "#8B4513";
-    ctx.beginPath(); ctx.arc(x + 50, y + 50, 45, 0, Math.PI * 2); ctx.fill();
-    // Gezicht
-    ctx.fillStyle = "#FFD700";
-    ctx.beginPath(); ctx.arc(x + 50, y + 55, 30, 0, Math.PI * 2); ctx.fill();
-    // Ogen
-    ctx.fillStyle = "black";
-    ctx.beginPath(); ctx.arc(x + 40, y + 50, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 60, y + 50, 4, 0, Math.PI * 2); ctx.fill();
-}
-
-function drawCarrot(x, y) {
-    ctx.fillStyle = "orange"; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 30, y); ctx.lineTo(x + 15, y + 40); ctx.fill();
-    ctx.fillStyle = "green"; ctx.fillRect(x + 10, y - 10, 10, 10);
-}
-
-function drawLog(x, y) {
-    ctx.fillStyle = "#8B4513"; ctx.fillRect(x, y, 60, 40);
-    ctx.fillStyle = "#A0522D"; ctx.fillRect(x, y + 15, 60, 5);
-}
-
-function loop() {
-    if (!actief || gepauzeerd) return;
-    let colorSet = levelColors[Math.min(level - 1, levelColors.length - 1)];
-    canvas.style.background = colorSet.sky;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    frame++;
-
-    if (isShooting && frame % 12 === 0) {
-        kogels.push({ x: speler.x + 50, y: speler.y + 25, r: 8 });
-    }
-
-    speler.dy += 0.8;
-    speler.y += speler.dy;
-    if (speler.y > 310) { speler.y = 310; speler.dy = 0; speler.springt = false; }
-    drawRabbit(speler.x, speler.y);
-
-    if (level % 5 === 0 && !baas) {
-        baas = { x: 700, y: 100, w: 100, h: 100, hp: level * 3, max: level * 3, dir: 3 };
-    }
-    if (baas) {
-        baas.y += baas.dir;
-        if (baas.y > 280 || baas.y < 20) baas.dir *= -1;
-        drawLion(baas.x, baas.y);
-        ctx.fillStyle = "red"; ctx.fillRect(baas.x, baas.y - 15, (baas.hp/baas.max) * 100, 8);
-    }
-
-    if (frame % Math.max(40, 100 - level * 4) === 0 && !baas) {
-        let isWortel = Math.random() > 0.4;
-        obstakels.push({ x: 850, y: isWortel ? 180 : 330, w: isWortel ? 30 : 60, h: 45, type: isWortel ? 'wortel' : 'boom' });
-    }
-
-    for (let i = obstakels.length - 1; i >= 0; i--) {
-        let o = obstakels[i];
-        o.x -= (6 + level);
-        if (o.type === 'wortel') drawCarrot(o.x, o.y); else drawLog(o.x, o.y);
-        
-        if (speler.x < o.x + o.w && speler.x + 40 > o.x && speler.y < o.y + o.h && speler.y + 40 > o.y) {
-            if (o.type === 'wortel') { carrotsCaught++; score += 100; obstakels.splice(i, 1); continue; }
-            else { verloren(); return; }
-        }
-        if (o.x < -100) obstakels.splice(i, 1);
-    }
-
-    for (let ki = kogels.length - 1; ki >= 0; ki--) {
-        let k = kogels[ki];
-        k.x += 12;
-        drawStone(k.x, k.y);
-
-        let kHit = false;
-        // Baas hit
-        if (baas && k.x > baas.x && k.x < baas.x + baas.w && k.y > baas.y && k.y < baas.y + baas.h) {
-            baas.hp--; kogels.splice(ki, 1); kHit = true;
-            if (baas.hp <= 0) { baas = null; score += 2000; level++; }
-        }
-        if (kHit) continue;
-
-        // Boomstam hit
-        for (let oi = obstakels.length - 1; oi >= 0; oi--) {
-            let o = obstakels[oi];
-            if (o.type === 'boom' && k.x + 10 > o.x && k.x - 10 < o.x + o.w && k.y + 10 > o.y && k.y - 10 < o.y + o.h) {
-                score += 50;
-                obstakels.splice(oi, 1);
-                kogels.splice(ki, 1);
-                break;
-            }
-        }
-        if (!kHit && k.x > 850) kogels.splice(ki, 1);
-    }
-
-    if (score > level * 1000 && !baas) level++;
-    document.getElementById("stats-top").innerText = `Level: ${level} | Score: ${score}`;
-    document.getElementById("stats-carrots").innerText = `Wortels: ${carrotsCaught} 🥕`;
-    requestAnimationFrame(loop);
-}
-
-function verloren() {
-    actief = false; isShooting = false;
-    setTimeout(() => {
-        let n = prompt(`SPEL OVER!\nScore: ${score}\n\nNaam:`);
-        let naam = n || "Speler";
-        if (score > highscore) {
-            highscore = score; highscoreName = naam;
-            localStorage.setItem("konijnHS", highscore); localStorage.setItem("konijnHSName", highscoreName);
-        }
-        location.reload();
-    }, 100);
-}
-</script>
-</body>
-</html>
+    ctx.beginPath(); ctx.arc(x + 35, y + 15, 12, 0, Math.
