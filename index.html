@@ -8,21 +8,23 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; background: #1a1a1a; font-family: sans-serif; color: white; overflow: hidden; touch-action: none; display: flex; flex-direction: column; height: 100vh; }
         #game-container { flex-grow: 1; position: relative; width: 100%; display: flex; align-items: center; justify-content: center; }
-        canvas { display: block; width: 100%; max-width: 800px; background: #87CEEB; border: 2px solid #555; }
-        .ui { position: absolute; top: 10px; width: 100%; text-align: center; font-weight: bold; font-size: 20px; text-shadow: 2px 2px #000; pointer-events: none; }
-        .controls { display: flex; width: 100%; height: 120px; background: #222; padding: 10px; gap: 10px; }
-        button { flex: 1; font-size: 22px; cursor: pointer; border-radius: 15px; border: none; background: #eee; font-weight: bold; }
+        canvas { display: block; width: 100%; max-width: 800px; background: #87CEEB; }
+        .ui { position: absolute; top: 10px; width: 100%; text-align: center; font-weight: bold; font-size: 18px; text-shadow: 2px 2px #000; pointer-events: none; }
+        .controls { display: flex; width: 100%; height: 130px; background: #222; padding: 15px 15px 30px 15px; gap: 15px; }
+        button { flex: 1; font-size: 22px; cursor: pointer; border-radius: 15px; border: none; background: #eee; font-weight: bold; box-shadow: 0 4px #999; }
+        button:active { background: #ccc; transform: translateY(2px); box-shadow: 0 2px #666; }
         #start-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; }
     </style>
 </head>
 <body>
 
 <div id="start-overlay">
-    <h1 style="color: orange; font-size: 40px;">RABBIT WORLDS</h1>
-    <button onclick="startGame()" style="width: 200px; height: 60px; background: orange; color: white; border-radius: 10px;">START NU</button>
+    <h1 style="color: orange; font-size: 40px; margin-bottom: 5px;">RABBIT WORLDS</h1>
+    <p style="margin-bottom: 20px;">Stone Age: Wortels & Leeuwen</p>
+    <button onclick="startGame()" style="width: 200px; height: 60px; background: orange; color: white; border-radius: 10px; flex: none;">START</button>
 </div>
 
-<div class="ui">Score: <span id="scoreVal">0</span></div>
+<div class="ui">Score: <span id="scoreVal">0</span> | Wortels: <span id="carrotVal">0</span> 🥕</div>
 
 <div id="game-container">
     <canvas id="gameCanvas" width="800" height="400"></canvas>
@@ -30,15 +32,15 @@
 
 <div class="controls">
     <button id="jumpBtn">SPRING</button>
-    <button id="fireBtn" style="background: orange;">VUUR 🔥</button>
+    <button id="fireBtn" style="background: orange; color: white;">VUUR 🔥</button>
 </div>
 
 <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
-    let score = 0, level = 1, running = false, frame = 0;
-    let p = { x: 50, y: 310, w: 50, h: 50, dy: 0, jump: false };
-    let stones = [], logs = [], baas = null;
+    let score = 0, level = 1, carrotsCaught = 0, running = false, frame = 0;
+    let p = { x: 50, y: 310, dy: 0, jump: false };
+    let stones = [], items = [], baas = null;
 
     function startGame() {
         document.getElementById("start-overlay").style.display = "none";
@@ -47,11 +49,37 @@
         setInterval(gameLoop, 1000 / 60); 
     }
 
+    // Besturing
     const jumpBtn = document.getElementById("jumpBtn");
     const fireBtn = document.getElementById("fireBtn");
 
-    jumpBtn.onmousedown = jumpBtn.ontouchstart = (e) => { e.preventDefault(); if (!p.jump) { p.dy = -16; p.jump = true; } };
-    fireBtn.onmousedown = fireBtn.ontouchstart = (e) => { e.preventDefault(); stones.push({ x: p.x + 45, y: p.y + 25, r: 12 }); };
+    jumpBtn.onmousedown = jumpBtn.ontouchstart = (e) => { e.preventDefault(); if (!p.jump && running) { p.dy = -16; p.jump = true; } };
+    fireBtn.onmousedown = fireBtn.ontouchstart = (e) => { e.preventDefault(); if (running) stones.push({ x: p.x + 45, y: p.y + 25 }); };
+
+    // Graphics Functies
+    function drawRabbit(x, y) {
+        ctx.fillStyle = "white";
+        ctx.beginPath(); ctx.ellipse(x + 25, y + 30, 20, 15, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + 35, y + 15, 12, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "pink"; ctx.fillRect(x + 30, y - 10, 6, 20); ctx.fillRect(x + 40, y - 10, 6, 20);
+    }
+
+    function drawCarrot(x, y) {
+        ctx.fillStyle = "orange"; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 20, y); ctx.lineTo(x + 10, y + 25); ctx.fill();
+        ctx.fillStyle = "green"; ctx.fillRect(x + 5, y - 5, 10, 5);
+    }
+
+    function drawLog(x, y) {
+        ctx.fillStyle = "#8B4513"; ctx.fillRect(x, y, 60, 40);
+        ctx.fillStyle = "#A0522D"; ctx.fillRect(x, y + 15, 60, 5);
+    }
+
+    function drawLion(x, y) {
+        ctx.fillStyle = "#8B4513"; ctx.beginPath(); ctx.arc(x + 50, y + 50, 45, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#FFD700"; ctx.beginPath(); ctx.arc(x + 50, y + 55, 30, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(x + 40, y + 50, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + 60, y + 50, 4, 0, Math.PI * 2); ctx.fill();
+    }
 
     function gameLoop() {
         if (!running) return;
@@ -61,39 +89,13 @@
         // Speler
         p.dy += 0.8; p.y += p.dy;
         if (p.y > 310) { p.y = 310; p.dy = 0; p.jump = false; }
-        ctx.fillStyle = "white"; ctx.fillRect(p.x, p.y, 40, 40); // Simpel konijn voor stabiliteit
+        drawRabbit(p.x, p.y);
 
-        // Boomstammen
-        if (frame % 80 === 0) logs.push({ x: 850, y: 330, w: 60, h: 40 });
-        for (let i = logs.length - 1; i >= 0; i--) {
-            let l = logs[i]; l.x -= 6;
-            ctx.fillStyle = "#8B4513"; ctx.fillRect(l.x, l.y, l.w, l.h);
-
-            // Check botsing met speler
-            if (p.x < l.x + l.w && p.x + 40 > l.x && p.y < l.y + l.h && p.y + 40 > l.y) {
-                running = false; alert("Game Over!"); location.reload();
-            }
+        // Baas Leeuw
+        if (level >= 3 && !baas) {
+            baas = { x: 650, y: 100, hp: 15, max: 15, dir: 3 };
         }
-
-        // Stenen schieten & Hit-detectie
-        for (let si = stones.length - 1; si >= 0; si--) {
-            let s = stones[si]; s.x += 10;
-            ctx.fillStyle = "gray"; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
-
-            for (let li = logs.length - 1; li >= 0; li--) {
-                let l = logs[li];
-                // RUIME HITBOX: We checken of de steen de boomstam raakt
-                if (s.x + 15 > l.x && s.x - 15 < l.x + l.w && s.y + 15 > l.y && s.y - 15 < l.y + l.h) {
-                    logs.splice(li, 1);
-                    stones.splice(si, 1);
-                    score += 50;
-                    document.getElementById("scoreVal").innerText = score;
-                    break; 
-                }
-            }
-            if (s.x > 850) stones.splice(si, 1);
-        }
-    }
-</script>
-</body>
-</html>
+        if (baas) {
+            baas.y += baas.dir;
+            if (baas.y > 280 || baas.y < 20) baas.dir *= -1;
+            drawLion(baas.x
