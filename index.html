@@ -56,7 +56,7 @@
     <div id="startScherm">
         <h1 style="color:#ff9800; font-size: 40px; margin-bottom: 10px;">🥕 RABBIT WORLDS</h1>
         <p id="hs-display" style="font-size: 20px; margin-bottom: 20px;"></p>
-        <button onclick="start()" style="flex:none; width: 200px; height: 60px;">START</button>
+        <button onclick="start()" style="flex:none; width: 200px; height: 60px;">START GAME</button>
     </div>
 
     <div id="pauzeScherm">
@@ -97,8 +97,18 @@ const levelColors = [{ sky: "#87CEEB" }, { sky: "#a2d2ff" }, { sky: "#ffafcc" },
 
 function start() {
     document.getElementById("startScherm").style.display = "none";
-    actief = true; gepauzeerd = false; score = 0; level = 1; carrotsCaught = 0;
-    obstakels = []; kogels = []; baas = null; speler.y = 310;
+    actief = true; 
+    gepauzeerd = false; 
+    score = 0; 
+    level = 1; 
+    carrotsCaught = 0;
+    obstakels = []; 
+    kogels = []; 
+    baas = null; 
+    speler.y = 310;
+    speler.dy = 0;
+    
+    // Zorg dat de loop start
     requestAnimationFrame(loop);
 }
 
@@ -109,6 +119,7 @@ function togglePauze() {
     if (!gepauzeerd) requestAnimationFrame(loop);
 }
 
+// Controls
 const jumpBtn = document.getElementById("jumpBtn");
 const fireBtn = document.getElementById("fireBtn");
 
@@ -123,7 +134,63 @@ fireBtn.addEventListener("touchend", stopShoot);
 fireBtn.addEventListener("mousedown", startShoot);
 fireBtn.addEventListener("mouseup", stopShoot);
 
+// Drawing Functions
 function drawRabbit(x, y) {
     ctx.fillStyle = "white";
     ctx.beginPath(); ctx.ellipse(x + 25, y + 30, 20, 15, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 35, y + 15, 12, 0, Math.
+    ctx.beginPath(); ctx.arc(x + 35, y + 15, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "pink"; ctx.fillRect(x + 30, y - 10, 6, 20); ctx.fillRect(x + 40, y - 10, 6, 20);
+}
+
+function drawStone(x, y) {
+    ctx.fillStyle = "#808080";
+    ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawLion(x, y) {
+    ctx.fillStyle = "#8B4513"; ctx.beginPath(); ctx.arc(x + 50, y + 50, 45, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#FFD700"; ctx.beginPath(); ctx.arc(x + 50, y + 55, 30, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "black"; 
+    ctx.beginPath(); ctx.arc(x + 40, y + 50, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 60, y + 50, 4, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawCarrot(x, y) {
+    ctx.fillStyle = "orange"; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 30, y); ctx.lineTo(x + 15, y + 40); ctx.fill();
+    ctx.fillStyle = "green"; ctx.fillRect(x + 10, y - 10, 10, 10);
+}
+
+function drawLog(x, y) {
+    ctx.fillStyle = "#8B4513"; ctx.fillRect(x, y, 60, 40);
+    ctx.fillStyle = "#A0522D"; ctx.fillRect(x, y + 15, 60, 5);
+}
+
+function loop() {
+    if (!actief || gepauzeerd) return;
+    
+    let colorSet = levelColors[Math.min(level - 1, levelColors.length - 1)];
+    canvas.style.background = colorSet.sky;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    frame++;
+
+    if (isShooting && frame % 12 === 0) {
+        kogels.push({ x: speler.x + 50, y: speler.y + 25 });
+    }
+
+    speler.dy += 0.8;
+    speler.y += speler.dy;
+    if (speler.y > 310) { speler.y = 310; speler.dy = 0; speler.springt = false; }
+    drawRabbit(speler.x, speler.y);
+
+    if (level % 5 === 0 && !baas) {
+        baas = { x: 700, y: 100, w: 100, h: 100, hp: level * 3, max: level * 3, dir: 3 };
+    }
+    if (baas) {
+        baas.y += baas.dir;
+        if (baas.y > 280 || baas.y < 20) baas.dir *= -1;
+        drawLion(baas.x, baas.y);
+        ctx.fillStyle = "red"; ctx.fillRect(baas.x, baas.y - 15, (baas.hp/baas.max) * 100, 8);
+    }
+
+    if (frame % Math.max(40, 100 - level * 4) === 0 && !baas) {
+        let is
