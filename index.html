@@ -26,25 +26,25 @@
             font-weight: bold; font-size: 18px; text-shadow: 2px 2px #000; z-index: 5;
         }
         .controls { 
-            display: flex; width: 100%; height: 130px; 
-            background: #222; padding: 15px 15px 30px 15px; gap: 15px;
+            display: flex; width: 100%; height: 140px; 
+            background: #222; padding: 15px 15px 40px 15px; gap: 15px;
         }
         button { 
-            flex: 1; font-size: 22px; cursor: pointer; border-radius: 15px; 
+            flex: 1; font-size: 24px; cursor: pointer; border-radius: 20px; 
             border: none; background: #eee; font-weight: bold; color: #333;
-            box-shadow: 0 4px #999; -webkit-user-select: none; user-select: none;
+            box-shadow: 0 6px #999; -webkit-user-select: none; user-select: none;
         }
-        button:active { background: #ccc; box-shadow: 0 2px #666; transform: translateY(2px); }
+        button:active { background: #ccc; box-shadow: 0 2px #666; transform: translateY(4px); }
         
         #startScherm, #pauzeScherm { 
-            position: absolute; inset: 0; background: rgba(0,0,0,0.8); 
-            z-index: 10; display: none; flex-direction: column; 
+            position: absolute; inset: 0; background: rgba(0,0,0,0.85); 
+            z-index: 100; display: flex; flex-direction: column; 
             justify-content: center; align-items: center; text-align: center;
         }
-        #startScherm { display: flex; }
+        #pauzeScherm { display: none; }
         .pause-btn {
             position: absolute; top: 10px; right: 10px; width: 50px; height: 50px;
-            z-index: 20; font-size: 20px; padding: 0; flex: none; pointer-events: auto;
+            z-index: 200; font-size: 20px; padding: 0; flex: none; pointer-events: auto;
         }
     </style>
 </head>
@@ -54,9 +54,9 @@
     <button class="pause-btn" onclick="togglePauze()">||</button>
     
     <div id="startScherm">
-        <h1 style="color:#ff9800; font-size: 40px; margin-bottom: 10px;">🥕 RABBIT WORLDS</h1>
-        <p id="hs-display" style="font-size: 20px; margin-bottom: 20px;"></p>
-        <button onclick="start()" style="flex:none; width: 200px; height: 60px;">START GAME</button>
+        <h1 style="color:#ff9800; font-size: 45px; margin-bottom: 5px;">🥕 RABBIT WORLDS</h1>
+        <p id="hs-display" style="font-size: 20px; margin-bottom: 25px;"></p>
+        <button onclick="start()" style="flex:none; width: 220px; height: 70px; background:#ff9800; color:white;">START SPEL</button>
     </div>
 
     <div id="pauzeScherm">
@@ -81,6 +81,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 let score = 0, level = 1, actief = false, gepauzeerd = false, frame = 0, carrotsCaught = 0;
+let gameInterval = null;
 let highscore = parseInt(localStorage.getItem("konijnHS")) || 0;
 let highscoreName = localStorage.getItem("konijnHSName") || "Niemand";
 
@@ -96,7 +97,7 @@ let isShooting = false;
 const levelColors = [{ sky: "#87CEEB" }, { sky: "#a2d2ff" }, { sky: "#ffafcc" }, { sky: "#ffc8dd" }, { sky: "#cdb4db" }, { sky: "#2b2d42" }];
 
 function start() {
-    document.getElementById("startScherm").style.display = "none";
+    // Reset alles
     actief = true; 
     gepauzeerd = false; 
     score = 0; 
@@ -105,36 +106,37 @@ function start() {
     obstakels = []; 
     kogels = []; 
     baas = null; 
+    frame = 0;
     speler.y = 310;
     speler.dy = 0;
+
+    document.getElementById("startScherm").style.display = "none";
     
-    // Zorg dat de loop start
-    requestAnimationFrame(loop);
+    // Stop oude interval als die er is
+    if(gameInterval) clearInterval(gameInterval);
+    // Start nieuwe motor (60 FPS)
+    gameInterval = setInterval(loop, 1000 / 60);
 }
 
 function togglePauze() {
     if (!actief) return;
     gepauzeerd = !gepauzeerd;
     document.getElementById("pauzeScherm").style.display = gepauzeerd ? "flex" : "none";
-    if (!gepauzeerd) requestAnimationFrame(loop);
 }
 
-// Controls
+// Besturing
 const jumpBtn = document.getElementById("jumpBtn");
 const fireBtn = document.getElementById("fireBtn");
 
 const doJump = () => { if (!speler.springt && actief && !gepauzeerd) { speler.dy = -16; speler.springt = true; } };
-jumpBtn.addEventListener("touchstart", (e) => { e.preventDefault(); doJump(); });
-jumpBtn.addEventListener("mousedown", (e) => { e.preventDefault(); doJump(); });
+jumpBtn.onmousedown = (e) => { e.preventDefault(); doJump(); };
+jumpBtn.ontouchstart = (e) => { e.preventDefault(); doJump(); };
 
-const startShoot = (e) => { e.preventDefault(); if(actief && !gepauzeerd) isShooting = true; };
-const stopShoot = (e) => { e.preventDefault(); isShooting = false; };
-fireBtn.addEventListener("touchstart", startShoot);
-fireBtn.addEventListener("touchend", stopShoot);
-fireBtn.addEventListener("mousedown", startShoot);
-fireBtn.addEventListener("mouseup", stopShoot);
+fireBtn.onmousedown = (e) => { e.preventDefault(); if(actief && !gepauzeerd) isShooting = true; };
+fireBtn.onmouseup = (e) => { e.preventDefault(); isShooting = false; };
+fireBtn.ontouchstart = (e) => { e.preventDefault(); if(actief && !gepauzeerd) isShooting = true; };
+fireBtn.ontouchend = (e) => { e.preventDefault(); isShooting = false; };
 
-// Drawing Functions
 function drawRabbit(x, y) {
     ctx.fillStyle = "white";
     ctx.beginPath(); ctx.ellipse(x + 25, y + 30, 20, 15, 0, 0, Math.PI * 2); ctx.fill();
@@ -143,7 +145,7 @@ function drawRabbit(x, y) {
 }
 
 function drawStone(x, y) {
-    ctx.fillStyle = "#808080";
+    ctx.fillStyle = "#666";
     ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill();
 }
 
@@ -160,11 +162,6 @@ function drawCarrot(x, y) {
     ctx.fillStyle = "green"; ctx.fillRect(x + 10, y - 10, 10, 10);
 }
 
-function drawLog(x, y) {
-    ctx.fillStyle = "#8B4513"; ctx.fillRect(x, y, 60, 40);
-    ctx.fillStyle = "#A0522D"; ctx.fillRect(x, y + 15, 60, 5);
-}
-
 function loop() {
     if (!actief || gepauzeerd) return;
     
@@ -173,15 +170,18 @@ function loop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     frame++;
 
+    // Schieten (stenen)
     if (isShooting && frame % 12 === 0) {
-        kogels.push({ x: speler.x + 50, y: speler.y + 25 });
+        kogels.push({ x: speler.x + 50, y: speler.y + 25, w: 20, h: 20 });
     }
 
+    // Zwaartekracht
     speler.dy += 0.8;
     speler.y += speler.dy;
     if (speler.y > 310) { speler.y = 310; speler.dy = 0; speler.springt = false; }
     drawRabbit(speler.x, speler.y);
 
+    // Baas (Leeuw) logica
     if (level % 5 === 0 && !baas) {
         baas = { x: 700, y: 100, w: 100, h: 100, hp: level * 3, max: level * 3, dir: 3 };
     }
@@ -192,5 +192,72 @@ function loop() {
         ctx.fillStyle = "red"; ctx.fillRect(baas.x, baas.y - 15, (baas.hp/baas.max) * 100, 8);
     }
 
+    // Spawn obstakels
     if (frame % Math.max(40, 100 - level * 4) === 0 && !baas) {
-        let is
+        let isWortel = Math.random() > 0.4;
+        obstakels.push({ x: 850, y: isWortel ? 180 : 330, w: isWortel ? 30 : 60, h: 50, type: isWortel ? 'wortel' : 'boom' });
+    }
+
+    // Obstakels verplaatsen en tekenen
+    for (let i = obstakels.length - 1; i >= 0; i--) {
+        let o = obstakels[i];
+        o.x -= (6 + level);
+        
+        if (o.type === 'wortel') drawCarrot(o.x, o.y); 
+        else {
+            ctx.fillStyle = "#8B4513"; ctx.fillRect(o.x, o.y, o.w, o.h); // Boomstam
+        }
+        
+        // Botsing met speler
+        if (speler.x < o.x + o.w && speler.x + 40 > o.x && speler.y < o.y + o.h && speler.y + 40 > o.y) {
+            if (o.type === 'wortel') { carrotsCaught++; score += 100; obstakels.splice(i, 1); }
+            else { verloren(); }
+        }
+        if (o.x < -100) obstakels.splice(i, 1);
+    }
+
+    // Kogels (stenen) logica
+    for (let ki = kogels.length - 1; ki >= 0; ki--) {
+        let k = kogels[ki];
+        k.x += 12;
+        drawStone(k.x, k.y);
+
+        // Raak baas?
+        if (baas && k.x > baas.x && k.x < baas.x + baas.w && k.y > baas.y && k.y < baas.y + baas.h) {
+            baas.hp--; kogels.splice(ki, 1);
+            if (baas.hp <= 0) { baas = null; score += 2000; level++; }
+            continue;
+        }
+
+        // Raak boomstam?
+        for (let oi = obstakels.length - 1; oi >= 0; oi--) {
+            let o = obstakels[oi];
+            if (o.type === 'boom' && k.x > o.x && k.x < o.x + o.w && k.y > o.y - 20 && k.y < o.y + o.h + 20) {
+                score += 50; obstakels.splice(oi, 1); kogels.splice(ki, 1);
+                break;
+            }
+        }
+        if (k.x > 850) kogels.splice(ki, 1);
+    }
+
+    if (score > level * 1000 && !baas) level++;
+    document.getElementById("stats-top").innerText = `Level: ${level} | Score: ${score}`;
+    document.getElementById("stats-carrots").innerText = `Wortels: ${carrotsCaught} 🥕`;
+}
+
+function verloren() {
+    actief = false; 
+    clearInterval(gameInterval);
+    setTimeout(() => {
+        let n = prompt(`SPEL OVER!\nScore: ${score}\n\nTyp je naam:`);
+        let naam = n || "Speler";
+        if (score > highscore) {
+            localStorage.setItem("konijnHS", score); 
+            localStorage.setItem("konijnHSName", naam);
+        }
+        location.reload();
+    }, 100);
+}
+</script>
+</body>
+</html>
