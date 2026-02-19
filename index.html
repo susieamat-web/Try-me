@@ -1,150 +1,176 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rabbit Adventure: Solo Quest</title>
+    <title>Konijn Avontuur</title>
     <style>
-        body { margin: 0; text-align: center; background: #1a1a1a; font-family: Arial, sans-serif; overflow: hidden; }
-        canvas { display: block; margin: 0 auto; background: #87CEEB; border-bottom: 10px solid #2e7d32; }
-        .ui { color: white; position: absolute; top: 10px; width: 100%; pointer-events: none; }
-        .controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 10px; }
-        button { 
-            padding: 15px 25px; font-size: 16px; cursor: pointer; pointer-events: auto;
-            border-radius: 10px; border: 2px solid white; background: #333; color: white;
-        }
-        #start-screen { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: flex; 
-                        flex-direction: column; align-items: center; justify-content: center; color: white; z-index: 10; }
+        body { margin: 0; background: #222; font-family: sans-serif; text-align: center; color: white; overflow: hidden; }
+        canvas { background: #87CEEB; display: block; margin: 20px auto; border: 4px solid #fff; }
+        .knop-container { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
+        button { padding: 20px 40px; font-size: 20px; cursor: pointer; border-radius: 10px; border: none; background: #eee; font-weight: bold; }
+        #startScherm { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     </style>
 </head>
 <body>
 
-<div id="start-screen">
-    <h1>🥕 KONIJN AVONTUUR</h1>
-    <p id="highscore-text">Highscore: 0</p>
-    <button onclick="startGame()">START SPEL</button>
+<div id="startScherm">
+    <h1>WORTEL AVONTUUR</h1>
+    <p id="hs">Highscore: 0</p>
+    <button onclick="start()">START SPEL</button>
 </div>
 
-<div class="ui">
-    <h2 id="stats">Level: 1 | Punten: 0</h2>
-</div>
+<div id="info">Level: 1 | Score: 0</div>
+<canvas id="gameCanvas" width="800" height="400"></canvas>
 
-<div class="controls">
-    <button onclick="jump()">SPRING (Spatie)</button>
-    <button onclick="shoot()">SCHIET (F)</button>
+<div class="knop-container">
+    <button onclick="spring()">SPRING</button>
+    <button onclick="schiet()">SCHIET</button>
 </div>
-
-<canvas id="gameCanvas"></canvas>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-canvas.width = 800;
-canvas.height = 400;
 
-// Constanten
-const GROUND_Y = 310;
-let gameActive = false;
+// Spel variabelen
 let score = 0;
 let level = 1;
+let actief = false;
 let frame = 0;
-let highscore = localStorage.getItem("rabbitHS") || 0;
+let highscore = localStorage.getItem("konijnHS") || 0;
+document.getElementById("hs").innerText = "Highscore: " + highscore;
 
-document.getElementById("highscore-text").innerText = "Highscore: " + highscore;
+// Entiteiten
+let speler = { x: 50, y: 310, w: 40, h: 40, dy: 0, springt: false };
+let obstakels = [];
+let kogels = [];
+let baas = null;
 
-// Objecten
-let rabbit = { x: 50, y: GROUND_Y, w: 40, h: 40, dy: 0, jumping: false };
-let obstacles = [];
-let bullets = [];
-let boss = null;
-
-function startGame() {
-    document.getElementById("start-screen").style.display = "none";
-    gameActive = true;
+function start() {
+    document.getElementById("startScherm").style.display = "none";
+    actief = true;
     score = 0;
     level = 1;
-    obstacles = [];
-    bullets = [];
-    boss = null;
-    rabbit.y = GROUND_Y;
-    requestAnimationFrame(gameLoop);
+    obstakels = [];
+    kogels = [];
+    baas = null;
+    speler.y = 310;
+    loop();
 }
 
-function drawRabbit() {
-    ctx.fillStyle = "white";
-    // Lichaam
-    ctx.beginPath(); ctx.ellipse(rabbit.x + 20, rabbit.y + 25, 18, 14, 0, 0, Math.PI * 2); ctx.fill();
-    // Hoofd
-    ctx.beginPath(); ctx.arc(rabbit.x + 30, rabbit.y + 10, 11, 0, Math.PI * 2); ctx.fill();
-    // Oortjes
-    ctx.beginPath(); ctx.ellipse(rabbit.x + 25, rabbit.y - 5, 5, 12, 0.1, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(rabbit.x + 34, rabbit.y - 5, 5, 12, -0.1, 0, Math.PI * 2); ctx.fill();
+function spring() {
+    if (!speler.springt) {
+        speler.dy = -15;
+        speler.springt = true;
+    }
 }
 
-function drawCarrot(x, y) {
-    ctx.fillStyle = "#FF9800"; // Oranje
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + 25, y);
-    ctx.lineTo(x + 12, y + 35);
-    ctx.fill();
-    ctx.fillStyle = "#4CAF50"; // Groen loof
-    ctx.fillRect(x + 8, y - 8, 10, 8);
+function schiet() {
+    kogels.push({ x: speler.x + 40, y: speler.y + 20 });
 }
 
-function drawBush(x, y) {
-    ctx.fillStyle = "#1B5E20"; // Donkergroen
-    ctx.beginPath(); ctx.arc(x + 10, y + 25, 15, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 25, y + 20, 15, 0, Math.PI * 2); ctx.fill();
-}
-
-function gameLoop() {
-    if (!gameActive) return;
+function loop() {
+    if (!actief) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     frame++;
 
-    // Zwaartekracht
-    if (rabbit.y < GROUND_Y) {
-        rabbit.dy += 0.8;
-    } else {
-        rabbit.y = GROUND_Y;
-        rabbit.dy = 0;
-        rabbit.jumping = false;
-    }
-    rabbit.y += rabbit.dy;
-    drawRabbit();
-
-    // Spawn systeem
-    if (frame % Math.max(30, 100 - (level * 3)) === 0 && !boss) {
-        let isAir = Math.random() > 0.5;
-        obstacles.push({
-            x: 850,
-            y: isAir ? 200 : GROUND_Y,
-            w: 30,
-            h: 30,
-            type: isAir ? 'air' : 'ground'
-        });
+    // Speler zwaartekracht
+    speler.dy += 0.8;
+    speler.y += speler.dy;
+    if (speler.y > 310) {
+        speler.y = 310;
+        speler.dy = 0;
+        speler.springt = false;
     }
 
-    // Boss bij level 10 en 20
-    if ((level === 10 || level === 20) && !boss) {
-        boss = { x: 600, y: 150, w: 80, h: 80, hp: level === 10 ? 5 : 10, max: level === 10 ? 5 : 10, dir: 2 };
+    // Teken Speler (Konijn)
+    ctx.fillStyle = "white";
+    ctx.fillRect(speler.x, speler.y, speler.w, speler.h); // Lichaam
+    ctx.fillRect(speler.x + 10, speler.y - 15, 10, 20); // Oor 1
+    ctx.fillRect(speler.x + 25, speler.y - 15, 10, 20); // Oor 2
+
+    // Baas verschijning
+    if ((level === 10 || level === 20) && !baas) {
+        baas = { x: 700, y: 100, w: 80, h: 80, hp: level === 10 ? 5 : 10, dir: 3 };
     }
 
-    if (boss) {
-        boss.y += boss.dir;
-        if (boss.y > 250 || boss.y < 50) boss.dir *= -1;
+    if (baas) {
+        baas.y += baas.dir;
+        if (baas.y > 300 || baas.y < 50) baas.dir *= -1;
         ctx.fillStyle = "purple";
-        ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
+        ctx.fillRect(baas.x, baas.y, baas.w, baas.h);
         ctx.fillStyle = "red";
-        ctx.fillRect(boss.x, boss.y - 15, (boss.hp / boss.max) * 80, 8);
+        ctx.fillRect(baas.x, baas.y - 10, baas.hp * 10, 5);
     }
 
-    // Obstakels bewegen
-    obstacles.forEach((obs, i) => {
-        obs.x -= (5 + level);
-        if (obs.type === 'air') drawCarrot(obs.x, obs.y);
-        else drawBush(obs.x, obs.y);
+    // Obstakels maken
+    if (frame % (100 - level * 2) === 0 && !baas) {
+        let isLucht = Math.random() > 0.5;
+        obstakels.push({ x: 850, y: isLucht ? 200 : 320, w: 30, h: 30, type: isLucht ? 'wortel' : 'struik' });
+    }
 
-        // Botsing konijn
-        if (rabbit.x < obs.x + obs.w && rabbit.x + 35 > obs.x && rabbit.y < obs.y + obs.h && rabbit
+    // Obstakels tekenen en bewegen
+    obstakels.forEach((o, i) => {
+        o.x -= (5 + level);
+        if (o.type === 'wortel') {
+            ctx.fillStyle = "orange";
+            ctx.beginPath(); ctx.arc(o.x + 15, o.y + 15, 15, 0, Math.PI * 2); ctx.fill(); // De wortel
+        } else {
+            ctx.fillStyle = "green";
+            ctx.fillRect(o.x, o.y, o.w, o.h); // De struik
+        }
+
+        // Botsing met speler
+        if (speler.x < o.x + o.w && speler.x + speler.w > o.x && speler.y < o.y + o.h && speler.y + speler.h > o.y) {
+            verloren();
+        }
+        if (o.x < -50) { obstakels.splice(i, 1); score += 10; }
+    });
+
+    // Kogels bewegen
+    kogels.forEach((k, i) => {
+        k.x += 10;
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(k.x, k.y, 10, 5);
+
+        // Raak baas
+        if (baas && k.x > baas.x && k.x < baas.x + baas.w && k.y > baas.y && k.y < baas.y + baas.h) {
+            kogels.splice(i, 1);
+            baas.hp--;
+            if (baas.hp <= 0) { baas = null; score += 1000; level++; }
+        }
+
+        // Raak wortel
+        obstakels.forEach((o, oi) => {
+            if (o.type === 'wortel' && k.x > o.x && k.x < o.x + o.w && k.y > o.y && k.y < o.y + o.h) {
+                obstakels.splice(oi, 1);
+                kogels.splice(i, 1);
+                score += 50;
+            }
+        });
+    });
+
+    if (score > level * 500 && level < 20 && !baas) level++;
+
+    document.getElementById("info").innerText = "Level: " + level + " | Score: " + score;
+    requestAnimationFrame(loop);
+}
+
+function verloren() {
+    actief = false;
+    alert("Game Over! Score: " + score);
+    if (score > highscore) {
+        let naam = prompt("Nieuwe Highscore! Naam:");
+        localStorage.setItem("konijnHS", score + " (" + naam + ")");
+    }
+    location.reload();
+}
+
+// Toetsenbord ondersteuning
+window.onkeydown = function(e) {
+    if (e.code === "Space") spring();
+    if (e.code === "KeyF") schiet();
+};
+</script>
+
+</body>
+</html>
