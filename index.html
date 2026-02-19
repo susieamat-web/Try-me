@@ -3,68 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rabbit Worlds: Final Edition</title>
+    <title>Rabbit Worlds: Final Stable</title>
     <style>
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; background: #1a1a1a; font-family: sans-serif; color: white; overflow: hidden; touch-action: none; display: flex; flex-direction: column; height: 100vh; }
-        #game-container { flex-grow: 1; position: relative; width: 100%; display: flex; align-items: center; justify-content: center; }
-        canvas { display: block; width: 100%; max-width: 800px; background: #87CEEB; border-bottom: 4px solid #4da33a; }
-        .ui { position: absolute; top: 10px; width: 100%; padding: 0 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; font-weight: bold; text-shadow: 2px 2px #000; }
-        .controls { display: flex; width: 100%; height: 130px; background: #222; padding: 15px; gap: 15px; }
-        .btn { flex: 1; font-size: 24px; cursor: pointer; border-radius: 15px; border: none; font-weight: bold; box-shadow: 0 4px #000; }
-        #overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; text-align: center; }
-        .start-btn { width: 200px; height: 65px; background: #ff4444; color: white; border: none; border-radius: 12px; font-size: 24px; font-weight: bold; cursor: pointer; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        body { margin: 0; background: #111; font-family: sans-serif; color: white; overflow: hidden; touch-action: none; height: 100vh; display: flex; flex-direction: column; }
+        #game-container { flex-grow: 1; position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
+        canvas { background: #87CEEB; width: 100%; max-width: 800px; display: block; border-bottom: 4px solid #2d5a27; }
+        .ui { position: absolute; top: 10px; width: 100%; padding: 0 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; font-weight: bold; text-shadow: 2px 2px #000; font-size: 18px; }
+        .controls { display: flex; width: 100%; height: 120px; background: #222; padding: 10px; gap: 10px; }
+        .btn { flex: 1; font-size: 22px; cursor: pointer; border-radius: 12px; border: none; font-weight: bold; color: #333; background: #eee; box-shadow: 0 4px #999; }
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px #666; }
+        #overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; text-align: center; }
+        .start-btn { padding: 20px 40px; background: #ff4444; color: white; border: none; border-radius: 10px; font-size: 24px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="game-container">
     <div class="ui">
-        <div>Score: <span id="s">0</span> | Wortels: <span id="c">0</span></div>
+        <div>Score: <span id="s">0</span> | 🥕: <span id="c">0</span></div>
         <div id="l">Level: 1</div>
     </div>
     <div id="overlay">
-        <h1 id="m" style="color: orange; font-size: 40px; margin: 0;">RABBIT WORLDS</h1>
-        <p id="t">Versla de Kat en verzamel wortels!</p>
-        <button class="start-btn" onclick="init()">START</button>
+        <h1 id="ot" style="color: orange; margin: 0;">RABBIT WORLDS</h1>
+        <p id="os">Versla de kat en verzamel wortels!</p>
+        <button class="start-btn" onclick="setup()">START SPEL</button>
     </div>
-    <canvas id="cvs" width="800" height="400"></canvas>
+    <canvas id="g" width="800" height="400"></canvas>
 </div>
 
 <div class="controls">
-    <button id="jb" class="btn" style="background: #fff;">SPRONG</button>
+    <button id="jb" class="btn">SPRING</button>
     <button id="fb" class="btn" style="background: #ff4444; color: white;">VUUR 🔥</button>
 </div>
 
 <script>
-    const cvs = document.getElementById("cvs"), ctx = cvs.getContext("2d");
-    let score, carrots, level, frame, running = false, paused = false;
-    let p, stones, logs, items, cat;
+    const canvas = document.getElementById("g"), ctx = canvas.getContext("2d");
+    let running = false, score, carrots, level, frame, p, stones, logs, items, cat;
 
-    function init() {
+    function setup() {
+        // Reset alle variabelen naar beginstand
         score = 0; carrots = 0; level = 1; frame = 0;
         stones = []; logs = []; items = []; cat = null;
-        p = { x: 50, y: 310, dy: 0, j: false };
+        p = { x: 60, y: 310, w: 40, h: 40, dy: 0, jumping: false };
+        
         document.getElementById("overlay").style.display = "none";
-        if (!running) { running = true; loop(); }
-        paused = false;
+        if (!running) {
+            running = true;
+            loop();
+        }
     }
 
-    const jump = (e) => { e.preventDefault(); if(!p.j && running) { p.dy = -16; p.j = true; } };
-    const fire = (e) => { e.preventDefault(); if(running) stones.push({ x: p.x + 45, y: p.y + 20 }); };
-    document.getElementById("jb").onmousedown = document.getElementById("jb").ontouchstart = jump;
-    document.getElementById("fb").onmousedown = document.getElementById("fb").ontouchstart = fire;
+    // Input besturing
+    const doJump = (e) => { e.preventDefault(); if(!p.jumping && running) { p.dy = -15; p.jumping = true; } };
+    const doFire = (e) => { e.preventDefault(); if(running) stones.push({ x: p.x + 40, y: p.y + 20 }); };
+    
+    document.getElementById("jb").onmousedown = document.getElementById("jb").ontouchstart = doJump;
+    document.getElementById("fb").onmousedown = document.getElementById("fb").ontouchstart = doFire;
 
-    function drawR(x, y) {
-        ctx.fillStyle = "white"; ctx.beginPath(); ctx.ellipse(x + 20, y + 25, 18, 14, 0, 0, 7); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + 30, y + 12, 10, 0, 7); ctx.fill();
-        ctx.fillStyle = "pink"; ctx.fillRect(x + 26, y - 8, 4, 15); ctx.fillRect(x + 34, y - 8, 4, 15);
-    }
+    function drawEntity() {
+        // Konijn
+        ctx.fillStyle = "white";
+        ctx.beginPath(); ctx.ellipse(p.x + 20, p.y + 25, 18, 14, 0, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x + 30, p.y + 12, 10, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "pink"; ctx.fillRect(p.x + 26, p.y - 8, 4, 12); ctx.fillRect(p.x + 34, p.y - 8, 4, 12);
 
-    function drawC(x, y) {
-        ctx.fillStyle = "#555"; ctx.beginPath(); ctx.arc(x+40, y+40, 35, 0, 7); ctx.fill();
-        ctx.fillStyle = "yellow"; ctx.fillRect(x+25, y+30, 8, 8); ctx.fillRect(x+47, y+30, 8, 8);
-        ctx.strokeStyle = "white"; ctx.beginPath(); ctx.moveTo(x+10, y+45); ctx.lineTo(x-10, y+40); ctx.stroke();
+        // Kat (als die er is)
+        if (cat) {
+            ctx.fillStyle = "#333";
+            ctx.beginPath(); ctx.arc(cat.x + 40, cat.y + 40, 35, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(cat.x+20, cat.y+15); ctx.lineTo(cat.x+35, cat.y+15); ctx.lineTo(cat.x+25, cat.y+30); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(cat.x+45, cat.y+15); ctx.lineTo(cat.x+60, cat.y+15); ctx.lineTo(cat.x+55, cat.y+30); ctx.fill();
+            ctx.fillStyle = "yellow"; ctx.fillRect(cat.x+28, cat.y+35, 6, 6); ctx.fillRect(cat.x+48, cat.y+35, 6, 6);
+            // HP balk
+            ctx.fillStyle = "red"; ctx.fillRect(cat.x, cat.y - 15, (cat.hp/cat.max)*80, 6);
+        }
     }
 
     function loop() {
@@ -72,65 +85,72 @@
         ctx.clearRect(0, 0, 800, 400);
         frame++;
 
-        // Player
+        // Speler fysica
         p.dy += 0.8; p.y += p.dy;
-        if (p.y > 310) { p.y = 310; p.dy = 0; p.j = false; }
-        drawR(p.x, p.y);
+        if (p.y > 310) { p.y = 310; p.dy = 0; p.jumping = false; }
+        
+        drawEntity();
 
-        // Cat Boss logic
-        if (score >= 1500 && !cat) cat = { x: 650, y: 100, hp: 12, max: 12, d: 3 };
+        // Baas verschijning
+        if (level >= 3 && !cat) cat = { x: 650, y: 100, hp: 10, max: 10, dir: 2.5 };
         if (cat) {
-            cat.y += cat.d;
-            if (cat.y > 280 || cat.y < 20) cat.d *= -1;
-            drawC(cat.x, cat.y);
-            ctx.fillStyle = "red"; ctx.fillRect(cat.x, cat.y - 15, (cat.hp/cat.max)*80, 8);
+            cat.y += cat.dir;
+            if (cat.y > 280 || cat.y < 20) cat.dir *= -1;
         }
 
-        // Spawning
-        if (frame % Math.max(30, 90 - level * 5) === 0 && !cat) logs.push({ x: 850, y: 335 });
-        if (frame % 150 === 0) items.push({ x: 850, y: 220 });
+        // Obstakels & Items Spawnen
+        if (frame % Math.max(35, 90 - level * 7) === 0 && !cat) logs.push({ x: 850, y: 335 });
+        if (frame % 160 === 0) items.push({ x: 850, y: 150 + Math.random() * 100 });
 
-        // Logs
-        logs.forEach((l, i) => {
-            l.x -= (6 + level);
+        // Boomstammen verwerken
+        for (let i = logs.length - 1; i >= 0; i--) {
+            let l = logs[i]; l.x -= (6 + level);
             ctx.fillStyle = "#8B4513"; ctx.fillRect(l.x, l.y, 60, 40);
-            if (p.x < l.x + 55 && p.x + 35 > l.x && p.y < l.y + 35 && p.y + 35 > l.y) {
+            // Botsing
+            if (p.x < l.x + 50 && p.x + 35 > l.x && p.y < l.y + 35 && p.y + 35 > l.y) {
                 running = false; document.getElementById("overlay").style.display = "flex";
-                document.getElementById("m").innerText = "GAME OVER";
+                document.getElementById("ot").innerText = "GAME OVER";
             }
             if (l.x < -100) logs.splice(i, 1);
-        });
+        }
 
-        // Wortels
-        items.forEach((it, i) => {
-            it.x -= 5;
+        // Wortels verwerken
+        for (let i = items.length - 1; i >= 0; i--) {
+            let it = items[i]; it.x -= 5;
             ctx.fillStyle = "orange"; ctx.beginPath(); ctx.moveTo(it.x, it.y); ctx.lineTo(it.x+20, it.y); ctx.lineTo(it.x+10, it.y+25); ctx.fill();
-            if (p.x < it.x + 25 && p.x + 40 > it.x && p.y < it.y + 25 && p.y + 40 > it.y) {
+            if (p.x < it.x + 30 && p.x + 40 > it.x && p.y < it.y + 30 && p.y + 40 > it.y) {
                 carrots++; score += 100; items.splice(i, 1);
             }
-        });
+            if (it.x < -100) items.splice(i, 1);
+        }
 
-        // Stones & Combat
-        stones.forEach((s, si) => {
-            s.x += 12;
-            ctx.fillStyle = "#444"; ctx.beginPath(); ctx.arc(s.x, s.y, 10, 0, 7); ctx.fill();
+        // Stenen & Gevecht
+        for (let i = stones.length - 1; i >= 0; i--) {
+            let s = stones[i]; s.x += 12;
+            ctx.fillStyle = "#666"; ctx.beginPath(); ctx.arc(s.x, s.y, 8, 0, 7); ctx.fill();
             
-            logs.forEach((l, li) => {
+            let hit = false;
+            // Hit op boomstam
+            for (let j = logs.length - 1; j >= 0; j--) {
+                let l = logs[j];
                 if (s.x > l.x - 10 && s.x < l.x + 70 && s.y > l.y - 10 && s.y < l.y + 50) {
-                    logs.splice(li, 1); stones.splice(si, 1); score += 50;
+                    logs.splice(j, 1); hit = true; score += 50; break;
                 }
-            });
-
-            if (cat && s.x > cat.x && s.x < cat.x + 80 && s.y > cat.y && s.y < cat.y + 80) {
-                cat.hp--; stones.splice(si, 1);
+            }
+            // Hit op kat
+            if (!hit && cat && s.x > cat.x && s.x < cat.x + 80 && s.y > cat.y && s.y < cat.y + 80) {
+                cat.hp--; hit = true;
                 if (cat.hp <= 0) { cat = null; score += 1000; level++; }
             }
-            if (s.x > 850) stones.splice(si, 1);
-        });
+            if (hit || s.x > 850) stones.splice(i, 1);
+        }
 
+        // UI update
+        if (score >= level * 1000 && !cat) level++;
         document.getElementById("s").innerText = score;
         document.getElementById("c").innerText = carrots;
         document.getElementById("l").innerText = "Level: " + level;
+
         requestAnimationFrame(loop);
     }
 </script>
