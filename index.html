@@ -1,71 +1,80 @@
 <!DOCTYPE html>
-<html>
+<html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Konijn Avontuur</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rabbit Worlds</title>
     <style>
-        body { margin: 0; background: #222; font-family: sans-serif; text-align: center; color: white; overflow: hidden; }
-        canvas { background: #87CEEB; display: block; margin: 20px auto; border: 4px solid #fff; }
-        .knop-container { display: flex; justify-content: center; gap: 20px; margin-top: 10px; }
-        button { padding: 20px 40px; font-size: 20px; cursor: pointer; border-radius: 10px; border: none; background: #eee; font-weight: bold; }
-        #startScherm { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        body { margin: 0; background: #1a1a1a; font-family: sans-serif; text-align: center; color: white; overflow: hidden; touch-action: manipulation; }
+        #game-container { position: relative; width: 100vw; max-width: 800px; margin: 0 auto; }
+        canvas { background: #87CEEB; display: block; width: 100%; height: auto; border-bottom: 10px solid #5d4037; }
+        .ui { position: absolute; top: 10px; width: 100%; pointer-events: none; font-weight: bold; font-size: 18px; text-shadow: 2px 2px #000; }
+        .controls { display: flex; justify-content: center; gap: 15px; padding: 20px; background: #222; }
+        button { flex: 1; padding: 20px; font-size: 20px; cursor: pointer; border-radius: 15px; border: none; background: #f0f0f0; font-weight: bold; color: #333; }
+        #startScherm { position: absolute; inset: 0; background: rgba(0,0,0,0.85); z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; }
     </style>
 </head>
 <body>
 
-<div id="startScherm">
-    <h1>WORTEL AVONTUUR</h1>
-    <p id="hs">Highscore: 0</p>
-    <button onclick="start()">START SPEL</button>
-</div>
+<div id="game-container">
+    <div id="startScherm">
+        <h1>🥕 RABBIT WORLDS</h1>
+        <p id="hs">Highscore: 0</p>
+        <button onclick="start()">START SPEL</button>
+    </div>
 
-<div id="info">Level: 1 | Score: 0</div>
-<canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div class="ui" id="info">Level: 1 | Score: 0</div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
 
-<div class="knop-container">
-    <button onclick="spring()">SPRING</button>
-    <button onclick="schiet()">SCHIET</button>
+    <div class="controls">
+        <button onclick="spring()">SPRING</button>
+        <button onclick="schiet()">SCHIET</button>
+    </div>
 </div>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// Spel variabelen
-let score = 0;
-let level = 1;
-let actief = false;
-let frame = 0;
+let score = 0, level = 1, actief = false, frame = 0;
 let highscore = localStorage.getItem("konijnHS") || 0;
 document.getElementById("hs").innerText = "Highscore: " + highscore;
 
-// Entiteiten
-let speler = { x: 50, y: 310, w: 40, h: 40, dy: 0, springt: false };
+let speler = { x: 50, y: 310, w: 50, h: 50, dy: 0, springt: false };
 let obstakels = [];
 let kogels = [];
 let baas = null;
 
 function start() {
     document.getElementById("startScherm").style.display = "none";
-    actief = true;
-    score = 0;
-    level = 1;
-    obstakels = [];
-    kogels = [];
-    baas = null;
+    actief = true; score = 0; level = 1; obstakels = []; kogels = []; baas = null;
     speler.y = 310;
     loop();
 }
 
-function spring() {
-    if (!speler.springt) {
-        speler.dy = -15;
-        speler.springt = true;
-    }
+function spring() { if (!speler.springt) { speler.dy = -16; speler.springt = true; } }
+function schiet() { kogels.push({ x: speler.x + 50, y: speler.y + 25 }); }
+
+function drawRabbit(x, y) {
+    ctx.fillStyle = "white";
+    ctx.beginPath(); ctx.ellipse(x + 25, y + 30, 20, 15, 0, 0, Math.PI * 2); ctx.fill(); // Lichaam
+    ctx.beginPath(); ctx.arc(x + 35, y + 15, 12, 0, Math.PI * 2); ctx.fill(); // Kop
+    ctx.fillStyle = "pink";
+    ctx.fillRect(x + 30, y - 10, 6, 20); // Oor 1
+    ctx.fillRect(x + 40, y - 10, 6, 20); // Oor 2
 }
 
-function schiet() {
-    kogels.push({ x: speler.x + 40, y: speler.y + 20 });
+function drawCarrot(x, y) {
+    ctx.fillStyle = "orange";
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 30, y); ctx.lineTo(x + 15, y + 40); ctx.fill();
+    ctx.fillStyle = "green"; ctx.fillRect(x + 10, y - 10, 10, 10); // Loof
+}
+
+function drawLog(x, y) {
+    ctx.fillStyle = "#8B4513"; // Donkerbruin
+    ctx.fillRect(x, y, 60, 30);
+    ctx.fillStyle = "#A0522D"; // Lichter bruin voor details
+    ctx.fillRect(x, y + 10, 60, 5);
 }
 
 function loop() {
@@ -73,104 +82,66 @@ function loop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     frame++;
 
-    // Speler zwaartekracht
+    // Speler bewegen
     speler.dy += 0.8;
     speler.y += speler.dy;
-    if (speler.y > 310) {
-        speler.y = 310;
-        speler.dy = 0;
-        speler.springt = false;
-    }
+    if (speler.y > 310) { speler.y = 310; speler.dy = 0; speler.springt = false; }
+    drawRabbit(speler.x, speler.y);
 
-    // Teken Speler (Konijn)
-    ctx.fillStyle = "white";
-    ctx.fillRect(speler.x, speler.y, speler.w, speler.h); // Lichaam
-    ctx.fillRect(speler.x + 10, speler.y - 15, 10, 20); // Oor 1
-    ctx.fillRect(speler.x + 25, speler.y - 15, 10, 20); // Oor 2
-
-    // Baas verschijning
+    // Baas
     if ((level === 10 || level === 20) && !baas) {
-        baas = { x: 700, y: 100, w: 80, h: 80, hp: level === 10 ? 5 : 10, dir: 3 };
+        baas = { x: 700, y: 100, w: 100, h: 100, hp: level === 10 ? 5 : 10, dir: 3 };
     }
-
     if (baas) {
         baas.y += baas.dir;
-        if (baas.y > 300 || baas.y < 50) baas.dir *= -1;
-        ctx.fillStyle = "purple";
-        ctx.fillRect(baas.x, baas.y, baas.w, baas.h);
-        ctx.fillStyle = "red";
-        ctx.fillRect(baas.x, baas.y - 10, baas.hp * 10, 5);
+        if (baas.y > 280 || baas.y < 20) baas.dir *= -1;
+        ctx.fillStyle = "purple"; ctx.fillRect(baas.x, baas.y, baas.w, baas.h);
+        ctx.fillStyle = "red"; ctx.fillRect(baas.x, baas.y - 15, baas.hp * 10, 8);
     }
 
-    // Obstakels maken
-    if (frame % (100 - level * 2) === 0 && !baas) {
+    // Obstakels
+    if (frame % (100 - level * 3) === 0 && !baas) {
         let isLucht = Math.random() > 0.5;
-        obstakels.push({ x: 850, y: isLucht ? 200 : 320, w: 30, h: 30, type: isLucht ? 'wortel' : 'struik' });
+        obstakels.push({ x: 850, y: isLucht ? 180 : 340, w: 60, h: 40, type: isLucht ? 'wortel' : 'boom' });
     }
 
-    // Obstakels tekenen en bewegen
     obstakels.forEach((o, i) => {
-        o.x -= (5 + level);
-        if (o.type === 'wortel') {
-            ctx.fillStyle = "orange";
-            ctx.beginPath(); ctx.arc(o.x + 15, o.y + 15, 15, 0, Math.PI * 2); ctx.fill(); // De wortel
-        } else {
-            ctx.fillStyle = "green";
-            ctx.fillRect(o.x, o.y, o.w, o.h); // De struik
-        }
+        o.x -= (6 + level);
+        if (o.type === 'wortel') drawCarrot(o.x, o.y); else drawLog(o.x, o.y);
 
-        // Botsing met speler
-        if (speler.x < o.x + o.w && speler.x + speler.w > o.x && speler.y < o.y + o.h && speler.y + speler.h > o.y) {
-            verloren();
-        }
-        if (o.x < -50) { obstakels.splice(i, 1); score += 10; }
+        if (speler.x < o.x + 40 && speler.x + 40 > o.x && speler.y < o.y + 30 && speler.y + 40 > o.y) verloren();
+        if (o.x < -100) { obstakels.splice(i, 1); score += 10; }
     });
 
-    // Kogels bewegen
+    // Kogels
     kogels.forEach((k, i) => {
-        k.x += 10;
-        ctx.fillStyle = "yellow";
-        ctx.fillRect(k.x, k.y, 10, 5);
+        k.x += 12;
+        ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(k.x, k.y, 6, 0, 7); ctx.fill();
 
-        // Raak baas
         if (baas && k.x > baas.x && k.x < baas.x + baas.w && k.y > baas.y && k.y < baas.y + baas.h) {
-            kogels.splice(i, 1);
-            baas.hp--;
+            kogels.splice(i, 1); baas.hp--;
             if (baas.hp <= 0) { baas = null; score += 1000; level++; }
         }
-
-        // Raak wortel
         obstakels.forEach((o, oi) => {
-            if (o.type === 'wortel' && k.x > o.x && k.x < o.x + o.w && k.y > o.y && k.y < o.y + o.h) {
-                obstakels.splice(oi, 1);
-                kogels.splice(i, 1);
-                score += 50;
+            if (o.type === 'wortel' && k.x > o.x && k.x < o.x + 30 && k.y > o.y && k.y < o.y + 40) {
+                obstakels.splice(oi, 1); kogels.splice(i, 1); score += 50;
             }
         });
     });
 
-    if (score > level * 500 && level < 20 && !baas) level++;
-
+    if (score > level * 600 && level < 20 && !baas) level++;
     document.getElementById("info").innerText = "Level: " + level + " | Score: " + score;
     requestAnimationFrame(loop);
 }
 
 function verloren() {
     actief = false;
-    alert("Game Over! Score: " + score);
     if (score > highscore) {
-        let naam = prompt("Nieuwe Highscore! Naam:");
-        localStorage.setItem("konijnHS", score + " (" + naam + ")");
-    }
+        let naam = prompt("NIEUWE HIGHSCORE: " + score + "! Naam?");
+        localStorage.setItem("konijnHS", score + (naam ? " (" + naam + ")" : ""));
+    } else { alert("Game Over! Score: " + score); }
     location.reload();
 }
-
-// Toetsenbord ondersteuning
-window.onkeydown = function(e) {
-    if (e.code === "Space") spring();
-    if (e.code === "KeyF") schiet();
-};
 </script>
-
 </body>
 </html>
