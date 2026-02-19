@@ -146,8 +146,8 @@ function drawCarrot(x, y) {
 }
 
 function drawLog(x, y) {
-    ctx.fillStyle = "#8B4513"; ctx.fillRect(x, y, 60, 30);
-    ctx.fillStyle = "#A0522D"; ctx.fillRect(x, y + 10, 60, 5);
+    ctx.fillStyle = "#8B4513"; ctx.fillRect(x, y, 60, 40); // Iets hoger gemaakt
+    ctx.fillStyle = "#A0522D"; ctx.fillRect(x, y + 15, 60, 5);
 }
 
 function loop() {
@@ -157,8 +157,8 @@ function loop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     frame++;
 
-    if (isShooting && frame % 12 === 0) {
-        kogels.push({ x: speler.x + 50, y: speler.y + 25 });
+    if (isShooting && frame % 10 === 0) { // Iets sneller schieten
+        kogels.push({ x: speler.x + 50, y: speler.y + 25, w: 15, h: 10 });
     }
 
     speler.dy += 0.8;
@@ -170,67 +170,3 @@ function loop() {
         baas = { x: 700, y: 100, w: 100, h: 100, hp: level * 2, max: level * 2, dir: 3 };
     }
     if (baas) {
-        baas.y += baas.dir;
-        if (baas.y > 280 || baas.y < 20) baas.dir *= -1;
-        ctx.fillStyle = "purple"; ctx.fillRect(baas.x, baas.y, baas.w, baas.h);
-        ctx.fillStyle = "red"; ctx.fillRect(baas.x, baas.y - 15, (baas.hp/baas.max) * 100, 8);
-    }
-
-    if (frame % Math.max(40, 100 - level * 4) === 0 && !baas) {
-        let isWortel = Math.random() > 0.4;
-        obstakels.push({ x: 850, y: isWortel ? 180 : 340, w: isWortel ? 30 : 60, h: 40, type: isWortel ? 'wortel' : 'boom' });
-    }
-
-    obstakels.forEach((o, i) => {
-        o.x -= (6 + level);
-        if (o.type === 'wortel') drawCarrot(o.x, o.y); else drawLog(o.x, o.y);
-        if (speler.x < o.x + o.w && speler.x + 40 > o.x && speler.y < o.y + o.h && speler.y + 40 > o.y) {
-            if (o.type === 'wortel') { carrotsCaught++; score += 100; obstakels.splice(i, 1); }
-            else { verloren(); }
-        }
-        if (o.x < -100) { obstakels.splice(i, 1); score += 10; }
-    });
-
-    kogels.forEach((k, ki) => {
-        k.x += 15;
-        ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(k.x, k.y, 6, 0, 7); ctx.fill();
-        
-        if (baas && k.x > baas.x && k.x < baas.x + baas.w && k.y > baas.y && k.y < baas.y + baas.h) {
-            kogels.splice(ki, 1); baas.hp--;
-            if (baas.hp <= 0) { baas = null; score += 2000; level++; }
-        }
-
-        // Boomstammen kapot schieten logica verbeterd
-        for (let i = obstakels.length - 1; i >= 0; i--) {
-            let o = obstakels[i];
-            if (o.type === 'boom' && k.x > o.x && k.x < o.x + o.w && k.y > o.y && k.y < o.y + o.h) {
-                score += 50;
-                obstakels.splice(i, 1);
-                kogels.splice(ki, 1);
-                break; 
-            }
-        }
-    });
-
-    if (score > level * 1000 && !baas) level++;
-    document.getElementById("stats-top").innerText = `Level: ${level} | Score: ${score}`;
-    document.getElementById("stats-carrots").innerText = `Wortels: ${carrotsCaught} 🥕`;
-    requestAnimationFrame(loop);
-}
-
-function verloren() {
-    actief = false; isShooting = false;
-    setTimeout(() => {
-        let n = prompt(`GAME OVER!\nScore: ${score}\nWortels: ${carrotsCaught}\n\nType je naam:`);
-        let naam = n || "Onbekend";
-        if (score > highscore) {
-            highscore = score; highscoreName = naam;
-            localStorage.setItem("konijnHS", highscore);
-            localStorage.setItem("konijnHSName", highscoreName);
-        }
-        location.reload();
-    }, 100);
-}
-</script>
-</body>
-</html>
