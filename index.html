@@ -1,90 +1,73 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Rabbit Warrior Mobile</title>
   <style>
-    body {
-      margin: 0; overflow: hidden; background: #87CEEB;
-      font-family: Arial, sans-serif; touch-action: none; user-select: none;
+    body{
+      margin:0; overflow:hidden; background:#87CEEB;
+      font-family:Arial, sans-serif; touch-action:none; user-select:none;
     }
-    canvas { display: block; width: 100vw; height: 100vh; }
+    canvas{display:block; width:100vw; height:100vh;}
 
-    #ui {
-      position: fixed; top: 10px; left: 10px;
-      color: white; background: rgba(0,0,0,0.4);
-      padding: 10px 16px; border-radius: 30px;
-      font-weight: bold; z-index: 10;
-      backdrop-filter: blur(5px);
-      border: 2px solid rgba(255,255,255,0.2);
-      display: none; /* alleen in-game */
-      gap: 10px;
+    #ui{
+      position:fixed; top:10px; left:10px; z-index:10;
+      color:#fff; background:rgba(0,0,0,0.4);
+      padding:10px 16px; border-radius:999px;
+      font-weight:800; display:none; gap:10px;
+      backdrop-filter:blur(6px); border:2px solid rgba(255,255,255,0.2);
     }
-    #ui span.badge { padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,0.15); }
+    #ui .badge{padding:4px 10px; border-radius:999px; background:rgba(255,255,255,0.15);}
 
-    .controls {
-      position: fixed; bottom: 30px; right: 20px; left: 20px;
-      display: none; /* alleen in-game */
-      justify-content: space-between; align-items: flex-end;
-      z-index: 10;
+    .controls{
+      position:fixed; bottom:30px; right:20px; left:20px;
+      display:none; justify-content:space-between; align-items:flex-end; z-index:10;
     }
-    .action-btn {
-      width: 85px; height: 85px; border-radius: 50%;
-      border: 4px solid white;
-      display: flex; align-items: center; justify-content: center;
-      color: white; font-weight: bold; font-size: 18px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-      background: rgba(255,255,255,0.12);
-      backdrop-filter: blur(6px);
+    .action-btn{
+      width:85px; height:85px; border-radius:50%;
+      border:4px solid #fff;
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-weight:900; font-size:18px;
+      box-shadow:0 5px 15px rgba(0,0,0,0.3);
+      backdrop-filter:blur(6px);
     }
-    #jumpBtn { background: rgba(0, 200, 255, 0.6); }
-    #shootBtn { background: rgba(255, 50, 50, 0.6); width: 70px; height: 70px; }
+    #jumpBtn{background:rgba(0,200,255,0.6);}
+    #shootBtn{background:rgba(255,50,50,0.6); width:70px; height:70px;}
 
-    /* Startmenu overlay */
-    #menuOverlay {
-      position: fixed; inset: 0; z-index: 20;
-      display: flex; align-items: center; justify-content: center;
-      background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.25), rgba(0,0,0,0.35));
-      backdrop-filter: blur(10px);
-      color: white;
-      padding: 24px;
+    /* Menu overlay */
+    #menuOverlay{
+      position:fixed; inset:0; z-index:20;
+      display:flex; align-items:center; justify-content:center;
+      background:radial-gradient(circle at 30% 20%, rgba(255,255,255,0.25), rgba(0,0,0,0.35));
+      backdrop-filter:blur(10px);
+      color:#fff; padding:24px;
     }
-    .menuCard {
-      width: min(520px, 92vw);
-      background: rgba(0,0,0,0.45);
-      border: 2px solid rgba(255,255,255,0.18);
-      border-radius: 22px;
-      padding: 18px 18px 16px;
-      box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+    .menuCard{
+      width:min(520px, 92vw);
+      background:rgba(0,0,0,0.45);
+      border:2px solid rgba(255,255,255,0.18);
+      border-radius:22px;
+      padding:18px 18px 16px;
+      box-shadow:0 18px 50px rgba(0,0,0,0.35);
     }
-    .menuTitle { font-size: 26px; font-weight: 800; letter-spacing: 0.4px; }
-    .menuSub { margin-top: 6px; opacity: 0.9; line-height: 1.35; }
-    .menuRow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
-    .pill {
-      background: rgba(255,255,255,0.14);
-      border: 1px solid rgba(255,255,255,0.18);
-      padding: 8px 12px; border-radius: 999px;
-      font-weight: 700;
+    .menuTitle{font-size:26px; font-weight:900; letter-spacing:0.4px;}
+    .menuSub{margin-top:6px; opacity:0.92; line-height:1.35;}
+    .menuRow{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;}
+    .pill{
+      background:rgba(255,255,255,0.14);
+      border:1px solid rgba(255,255,255,0.18);
+      padding:8px 12px; border-radius:999px; font-weight:900;
     }
-    .menuButtons { display: flex; gap: 10px; margin-top: 14px; }
-    .menuBtn {
-      flex: 1;
-      border: 0;
-      border-radius: 14px;
-      padding: 12px 12px;
-      font-size: 16px;
-      font-weight: 800;
-      color: white;
-      background: rgba(0, 200, 255, 0.65);
-      box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+    .menuButtons{display:flex; gap:10px; margin-top:14px;}
+    .menuBtn{
+      flex:1; border:0; border-radius:14px; padding:12px 12px;
+      font-size:16px; font-weight:900; color:#fff;
+      background:rgba(0,200,255,0.65);
+      box-shadow:0 10px 24px rgba(0,0,0,0.25);
     }
-    .menuBtn.secondary { background: rgba(255,255,255,0.16); }
-    .hint {
-      margin-top: 12px;
-      font-size: 13px;
-      opacity: 0.9;
-    }
+    .menuBtn.secondary{background:rgba(255,255,255,0.16);}
+    .hint{margin-top:12px; font-size:13px; opacity:0.9;}
   </style>
 </head>
 <body>
@@ -104,12 +87,12 @@
     <div class="menuCard">
       <div class="menuTitle">Rabbit Warrior</div>
       <div class="menuSub">
-        Spring over enemies, shoot to score. Highscore wordt automatisch opgeslagen op dit apparaat.
+        Jump over enemies and shoot to score. Highscore is saved on this device.
       </div>
 
       <div class="menuRow">
         <div class="pill">HIGHSCORE: <span id="menuHighscore">0</span></div>
-        <div class="pill">Tip: houd je vinger op FIRE</div>
+        <div class="pill">Tip: hold FIRE to auto-shoot</div>
       </div>
 
       <div class="menuButtons">
@@ -117,9 +100,7 @@
         <button class="menuBtn secondary" id="resetHighscoreBtn">RESET HIGHSCORE</button>
       </div>
 
-      <div class="hint">
-        Desktop: Space = Jump, Enter = Fire, Esc = Menu
-      </div>
+      <div class="hint">Desktop: Space = Jump, Enter = Fire, Esc = Menu</div>
     </div>
   </div>
 
@@ -138,26 +119,29 @@
     const hsEl = document.getElementById("hs");
     const menuHsEl = document.getElementById("menuHighscore");
 
-    const HIGHSCORE_KEY = "rabbit_warrior_highscore_v1";
+    const HIGHSCORE_KEY = "rabbit_warrior_highscore_v2";
 
-    let gameState = "menu"; // "menu" | "playing" | "gameover"
-    let score = 0;
-    let lives = 3;
-    let gameSpeed = 4;
-    let camX = 0;
+    let gameState = "menu"; // menu | playing
+    let score = 0, lives = 3, gameSpeed = 4, camX = 0;
+    const player = { x: 100, y: 0, vy: 0, onG: false };
 
-    const player = { x: 100, y: 0, w: 40, h: 50, vy: 0, onG: false };
     let enemies = [];
     let bullets = [];
     let rafId = null;
+
+    // Shooting fixes:
+    // - Add fire cooldown (prevents missed taps & burst spawns)
+    // - Add "hold to shoot" for touch/mouse
+    // - Fix bullet removal logic (no splice during forEach)
+    let firing = false;
+    let fireCooldown = 0;          // frames until next shot
+    const FIRE_RATE = 10;          // lower = faster (10 frames ~ 6 shots/sec at 60fps)
 
     function getHighscore() {
       const v = Number(localStorage.getItem(HIGHSCORE_KEY) || 0);
       return Number.isFinite(v) ? v : 0;
     }
-    function setHighscore(v) {
-      localStorage.setItem(HIGHSCORE_KEY, String(v));
-    }
+    function setHighscore(v) { localStorage.setItem(HIGHSCORE_KEY, String(v)); }
     function updateHighscoreUI() {
       const hs = getHighscore();
       hsEl.textContent = hs;
@@ -171,39 +155,6 @@
     window.addEventListener("resize", resize);
     resize();
 
-    // Controls helpers
-    function listen(id, fn) {
-      const el = document.getElementById(id);
-      el.addEventListener("touchstart", (e) => { e.preventDefault(); fn(); }, { passive: false });
-      el.addEventListener("mousedown", (e) => { e.preventDefault(); fn(); });
-    }
-
-    function jump() {
-      if (gameState !== "playing") return;
-      if (player.onG) player.vy = -16;
-    }
-    function fire() {
-      if (gameState !== "playing") return;
-      bullets.push({ x: player.x + 40, y: player.y - 25, vx: 10 });
-    }
-
-    listen("jumpBtn", jump);
-    listen("shootBtn", fire);
-
-    // Keyboard
-    window.addEventListener("keydown", (e) => {
-      if (e.code === "Space") { e.preventDefault(); jump(); }
-      if (e.code === "Enter") { e.preventDefault(); fire(); }
-      if (e.code === "Escape") { e.preventDefault(); showMenu(); }
-    });
-
-    // Menu buttons
-    document.getElementById("startBtn").addEventListener("click", () => startGame());
-    document.getElementById("resetHighscoreBtn").addEventListener("click", () => {
-      setHighscore(0);
-      updateHighscoreUI();
-    });
-
     function showMenu() {
       gameState = "menu";
       overlay.style.display = "flex";
@@ -213,16 +164,12 @@
     }
 
     function startGame() {
-      // reset run
-      score = 0;
-      lives = 3;
-      gameSpeed = 4;
-      camX = 0;
-      player.y = 0;
-      player.vy = 0;
-      player.onG = false;
+      score = 0; lives = 3; gameSpeed = 4; camX = 0;
+      player.y = 0; player.vy = 0; player.onG = false;
       enemies = [];
       bullets = [];
+      firing = false;
+      fireCooldown = 0;
 
       gameState = "playing";
       overlay.style.display = "none";
@@ -235,7 +182,6 @@
     }
 
     function gameOver() {
-      gameState = "gameover";
       const finalScore = Math.floor(score);
       const hs = getHighscore();
       if (finalScore > hs) setHighscore(finalScore);
@@ -243,7 +189,61 @@
       showMenu();
     }
 
+    function jump() {
+      if (gameState !== "playing") return;
+      if (player.onG) player.vy = -16;
+    }
+
+    function shootOnce() {
+      if (gameState !== "playing") return;
+      if (fireCooldown > 0) return;
+
+      const ground = canvas.height - 60;
+      const bulletY = player.y - 25; // consistent with your original
+      bullets.push({ x: camX + player.x + 40, y: bulletY, vx: 12 }); // world-space x
+      fireCooldown = FIRE_RATE;
+    }
+
+    // Robust press/hold handlers
+    function bindHoldButton(el, onPress, onRelease) {
+      el.addEventListener("touchstart", (e) => { e.preventDefault(); onPress(); }, { passive: false });
+      el.addEventListener("touchend",   (e) => { e.preventDefault(); onRelease(); }, { passive: false });
+      el.addEventListener("touchcancel",(e) => { e.preventDefault(); onRelease(); }, { passive: false });
+
+      el.addEventListener("mousedown", (e) => { e.preventDefault(); onPress(); });
+      window.addEventListener("mouseup", () => onRelease());
+      el.addEventListener("mouseleave", () => onRelease());
+    }
+
+    bindHoldButton(document.getElementById("jumpBtn"), () => jump(), () => {});
+    bindHoldButton(
+      document.getElementById("shootBtn"),
+      () => { firing = true; shootOnce(); },   // immediate shot + start hold
+      () => { firing = false; }
+    );
+
+    // Keyboard
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") { e.preventDefault(); jump(); }
+      if (e.code === "Enter") { e.preventDefault(); firing = true; shootOnce(); }
+      if (e.code === "Escape") { e.preventDefault(); showMenu(); }
+    });
+    window.addEventListener("keyup", (e) => {
+      if (e.code === "Enter") firing = false;
+    });
+
+    // Menu buttons
+    document.getElementById("startBtn").addEventListener("click", startGame);
+    document.getElementById("resetHighscoreBtn").addEventListener("click", () => {
+      setHighscore(0);
+      updateHighscoreUI();
+    });
+
     function update() {
+      // fire tick
+      if (fireCooldown > 0) fireCooldown--;
+      if (firing) shootOnce();
+
       // Player physics
       player.vy += 0.8;
       player.y += player.vy;
@@ -261,36 +261,41 @@
       camX += gameSpeed;
       score += 0.1;
 
-      // Spawn enemies
+      // Spawn enemies (world-space x)
       if (Math.random() < 0.02) {
-        enemies.push({ x: camX + canvas.width, y: ground - 15 });
+        enemies.push({ x: camX + canvas.width + 30, y: ground - 15 });
       }
 
-      // Bullets
+      // Update bullets (iterate backwards, safe splice)
       for (let bi = bullets.length - 1; bi >= 0; bi--) {
         const b = bullets[bi];
         b.x += b.vx;
 
-        // collisions
+        // Despawn if offscreen
+        if (b.x - camX > canvas.width + 50) {
+          bullets.splice(bi, 1);
+          continue;
+        }
+
+        // Collision with enemies (world-space)
         for (let ei = enemies.length - 1; ei >= 0; ei--) {
           const en = enemies[ei];
-          if (Math.abs((b.x - camX) - (en.x - camX)) < 30 && b.y > en.y - 30) {
+          const dx = Math.abs(b.x - en.x);
+          const dy = Math.abs(b.y - (en.y - 15));
+          if (dx < 28 && dy < 28) {
             enemies.splice(ei, 1);
             bullets.splice(bi, 1);
             score += 100;
             break;
           }
         }
-
-        if (bi < bullets.length) { // bullet may have been removed
-          if (bullets[bi] && bullets[bi].x > camX + canvas.width) bullets.splice(bi, 1);
-        }
       }
 
-      // Enemy collision with player
+      // Enemy collision with player (screen-space player.x vs enemy screen x)
       for (let i = enemies.length - 1; i >= 0; i--) {
         const en = enemies[i];
-        if (Math.abs(player.x - (en.x - camX)) < 30 && player.y > en.y - 20) {
+        const ex = en.x - camX;
+        if (Math.abs(player.x - ex) < 30 && player.y > en.y - 20) {
           lives--;
           enemies.splice(i, 1);
           if (lives <= 0) {
@@ -298,22 +303,23 @@
             return;
           }
         }
+
+        // Cleanup enemies behind camera
+        if (ex < -80) enemies.splice(i, 1);
       }
 
       sEl.textContent = Math.floor(score);
       lEl.textContent = lives;
 
-      // live highscore display (zonder constant te schrijven)
-      const liveHs = Math.max(getHighscore(), Math.floor(score));
-      hsEl.textContent = liveHs;
+      // live highscore display
+      hsEl.textContent = Math.max(getHighscore(), Math.floor(score));
     }
 
     function draw() {
-      // background
       ctx.fillStyle = "#87CEEB";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // clouds parallax
+      // Clouds (parallax)
       ctx.fillStyle = "white";
       for (let i = 0; i < 5; i++) {
         ctx.beginPath();
@@ -321,11 +327,11 @@
         ctx.fill();
       }
 
-      // ground
+      // Ground
       ctx.fillStyle = "#4CAF50";
       ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
 
-      // rabbit
+      // Rabbit
       ctx.save();
       ctx.translate(player.x, player.y);
       ctx.fillStyle = "white";
@@ -340,7 +346,7 @@
       ctx.fill();
       ctx.restore();
 
-      // bullets
+      // Bullets (convert world -> screen)
       ctx.fillStyle = "yellow";
       for (const b of bullets) {
         ctx.beginPath();
@@ -348,7 +354,7 @@
         ctx.fill();
       }
 
-      // enemies
+      // Enemies
       ctx.fillStyle = "#555";
       for (const en of enemies) {
         const x = en.x - camX;
@@ -357,6 +363,7 @@
         ctx.lineTo(x - 20, en.y - 30);
         ctx.lineTo(x + 20, en.y - 30);
         ctx.fill();
+
         ctx.fillStyle = "red";
         ctx.beginPath();
         ctx.arc(x, en.y - 20, 5, 0, Math.PI * 2);
