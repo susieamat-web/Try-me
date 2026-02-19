@@ -25,12 +25,11 @@
             text-align: center; pointer-events: none; 
             font-weight: bold; font-size: 18px; text-shadow: 2px 2px #000; z-index: 5;
         }
-        /* Verbeterde knoppen sectie */
         .controls { 
             display: flex; width: 100%; 
-            height: 130px; /* Iets hoger voor betere duimpositie */
+            height: 130px; 
             background: #222; 
-            padding: 15px 15px 30px 15px; /* Extra ruimte aan de onderkant tegen wegvallen */
+            padding: 15px 15px 30px 15px; 
             gap: 15px;
         }
         button { 
@@ -41,21 +40,34 @@
         }
         button:active { background: #ccc; box-shadow: 0 2px #666; transform: translateY(2px); }
         
-        #startScherm { 
-            position: absolute; inset: 0; background: rgba(0,0,0,0.9); 
-            z-index: 10; display: flex; flex-direction: column; 
+        #startScherm, #pauzeScherm { 
+            position: absolute; inset: 0; background: rgba(0,0,0,0.8); 
+            z-index: 10; display: none; flex-direction: column; 
             justify-content: center; align-items: center; text-align: center;
+        }
+        #startScherm { display: flex; }
+        .pause-btn {
+            position: absolute; top: 10px; right: 10px; width: 50px; height: 50px;
+            z-index: 20; font-size: 20px; padding: 0; flex: none;
         }
     </style>
 </head>
 <body>
 
 <div id="game-container">
+    <button class="pause-btn" onclick="togglePauze()">||</button>
+    
     <div id="startScherm">
         <h1 style="color:#ff9800; font-size: 40px; margin-bottom: 10px;">🥕 RABBIT WORLDS</h1>
         <p id="hs-display" style="font-size: 20px; margin-bottom: 20px;"></p>
         <button onclick="start()" style="flex:none; width: 200px; height: 60px;">START</button>
     </div>
+
+    <div id="pauzeScherm">
+        <h1 style="color:#fff; font-size: 40px; margin-bottom: 20px;">PAUZE</h1>
+        <button onclick="togglePauze()" style="flex:none; width: 200px; height: 60px;">VERDER</button>
+    </div>
+
     <div class="ui">
         <div id="stats-top">Level: 1 | Score: 0</div>
         <div id="stats-carrots" style="color: #ff9800;">Wortels: 0 🥕</div>
@@ -72,7 +84,7 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-let score = 0, level = 1, actief = false, frame = 0, carrotsCaught = 0;
+let score = 0, level = 1, actief = false, gepauzeerd = false, frame = 0, carrotsCaught = 0;
 let highscore = parseInt(localStorage.getItem("konijnHS")) || 0;
 let highscoreName = localStorage.getItem("konijnHSName") || "Niemand";
 
@@ -92,20 +104,27 @@ const levelColors = [
 
 function start() {
     document.getElementById("startScherm").style.display = "none";
-    actief = true; score = 0; level = 1; carrotsCaught = 0;
+    actief = true; gepauzeerd = false; score = 0; level = 1; carrotsCaught = 0;
     obstakels = []; kogels = []; baas = null;
     speler.y = 310;
     loop();
 }
 
+function togglePauze() {
+    if (!actief) return;
+    gepauzeerd = !gepauzeerd;
+    document.getElementById("pauzeScherm").style.display = gepauzeerd ? "flex" : "none";
+    if (!gepauzeerd) loop();
+}
+
 const jumpBtn = document.getElementById("jumpBtn");
 const fireBtn = document.getElementById("fireBtn");
 
-const doJump = () => { if (!speler.springt && actief) { speler.dy = -16; speler.springt = true; } };
+const doJump = () => { if (!speler.springt && actief && !gepauzeerd) { speler.dy = -16; speler.springt = true; } };
 jumpBtn.addEventListener("touchstart", (e) => { e.preventDefault(); doJump(); });
 jumpBtn.addEventListener("mousedown", (e) => { e.preventDefault(); doJump(); });
 
-const startShoot = (e) => { e.preventDefault(); isShooting = true; };
+const startShoot = (e) => { e.preventDefault(); if(!gepauzeerd) isShooting = true; };
 const stopShoot = (e) => { e.preventDefault(); isShooting = false; };
 fireBtn.addEventListener("touchstart", startShoot);
 fireBtn.addEventListener("touchend", stopShoot);
@@ -132,7 +151,7 @@ function drawLog(x, y) {
 }
 
 function loop() {
-    if (!actief) return;
+    if (!actief || gepauzeerd) return;
     let colorSet = levelColors[Math.min(level - 1, levelColors.length - 1)];
     canvas.style.background = colorSet.sky;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -175,15 +194,22 @@ function loop() {
     kogels.forEach((k, ki) => {
         k.x += 15;
         ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(k.x, k.y, 6, 0, 7); ctx.fill();
+        
         if (baas && k.x > baas.x && k.x < baas.x + baas.w && k.y > baas.y && k.y < baas.y + baas.h) {
             kogels.splice(ki, 1); baas.hp--;
             if (baas.hp <= 0) { baas = null; score += 2000; level++; }
         }
-        obstakels.forEach((o, oi) => {
+
+        // Boomstammen kapot schieten logica verbeterd
+        for (let i = obstakels.length - 1; i >= 0; i--) {
+            let o = obstakels[i];
             if (o.type === 'boom' && k.x > o.x && k.x < o.x + o.w && k.y > o.y && k.y < o.y + o.h) {
-                score += 50; obstakels.splice(oi, 1); kogels.splice(ki, 1);
+                score += 50;
+                obstakels.splice(i, 1);
+                kogels.splice(ki, 1);
+                break; 
             }
-        });
+        }
     });
 
     if (score > level * 1000 && !baas) level++;
@@ -195,17 +221,13 @@ function loop() {
 function verloren() {
     actief = false; isShooting = false;
     setTimeout(() => {
-        let n = prompt(`GAME OVER!\nScore: ${score}\nWortels: ${carrotsCaught}\n\nType je naam voor de ranglijst:`);
+        let n = prompt(`GAME OVER!\nScore: ${score}\nWortels: ${carrotsCaught}\n\nType je naam:`);
         let naam = n || "Onbekend";
-        
         if (score > highscore) {
-            highscore = score;
-            highscoreName = naam;
+            highscore = score; highscoreName = naam;
             localStorage.setItem("konijnHS", highscore);
             localStorage.setItem("konijnHSName", highscoreName);
-            alert("WOW! Een nieuw record!");
         }
-        updateHSDisplay();
         location.reload();
     }, 100);
 }
