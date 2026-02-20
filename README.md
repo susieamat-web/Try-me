@@ -1,50 +1,52 @@
-# Rabbit Worlds 🐰
+# 🐰 Rabbit Worlds
 
-A browser-based arcade game built with pure HTML, CSS and JavaScript.
+Jump. Dodge. Shoot. Survive.
 
-## 🎮 Play the Game
-
-Click below to play:
-
-👉 https://susieamat-web.github.io/Try-me/
-
-Jump over logs, collect carrots, and defeat the cat boss!
+Rabbit Worlds is a fast-paced browser arcade game where you help a brave little rabbit survive waves of obstacles and defeat powerful boss cats.
 
 ---
 
-## 🚀 Features
+## 🎮 Play Now
 
-- Highscore saved using localStorage
-- Boss fight starting at Level 3
-- Mobile & desktop support
-- Touch controls
-- Built with HTML5 Canvas
-- No frameworks – pure JavaScript
+👉 **Play here:**  
+https://susieamat-web.github.io/Try-me/
+
+(No downloads. Works on mobile and desktop.)
 
 ---
 
-## 📁 Project Structure
+## 🕹 How to Play
 
-- `index.html` → Complete game (HTML, CSS and JavaScript in one file)
-
----
-
-## 🛠️ Technologies Used
-
-- HTML5
-- CSS3
-- Vanilla JavaScript
-- Canvas API
+- **JUMP** to avoid incoming logs  
+- Collect 🥕 **carrots** to earn points  
+- Use **FIRE 🔥** to destroy obstacles  
+- Every 5 levels a **BOSS CAT** appears  
+- Defeat the boss to level up  
+- Try to beat your **highscore**
 
 ---
 
-## 📌 Future Improvements
+## ⚡ What Makes It Fun
 
-- Sound effects
-- Improved animations
-- Multiple worlds
-- Power-ups
+- Increasing difficulty as you level up  
+- Boss battles every 5th level  
+- Smooth animations and particle effects  
+- Responsive controls (touch + mouse)  
+- Highscore tracking  
+
+Each run gets faster and more intense.  
+How long can you survive?
 
 ---
 
-Created by Susanne
+## 📱 Works Everywhere
+
+- Desktop browsers  
+- Mobile browsers  
+- No installation required  
+
+Just open the link and play.
+
+---
+
+Have fun 🐰🔥
