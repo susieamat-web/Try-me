@@ -2,543 +2,884 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>Rabbit Worlds</title>
   <style>
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
-    body { margin: 0; background: #111; font-family: sans-serif; color: #fff; overflow: hidden; touch-action: none; height: 100vh; display: flex; flex-direction: column; }
-    #game-container { flex-grow: 1; position: relative; width: 100%; display: flex; justify-content: center; align-items: center; }
-    canvas { background: #87CEEB; width: 100%; max-width: 800px; display: block; border-bottom: 5px solid #2d5a27; }
-    .ui { position: absolute; top: 10px; width: 100%; padding: 0 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; font-weight: bold; text-shadow: 2px 2px #000; font-size: 16px; }
-    .controls { display: flex; width: 100%; height: 130px; background: #222; padding: 15px; gap: 15px; }
-    .btn { flex: 1; font-size: 24px; cursor: pointer; border-radius: 15px; border: none; font-weight: bold; color: #333; background: #eee; box-shadow: 0 5px #000; }
-    .btn:active { transform: translateY(3px); box-shadow: 0 2px #000; }
-    #overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; text-align: center; padding: 20px; }
-    .start-btn { padding: 18px 44px; background: orange; color: white; border: none; border-radius: 12px; font-size: 26px; font-weight: bold; cursor: pointer; box-shadow: 0 4px #b37400; }
-    .sub { opacity: 0.9; max-width: 560px; }
+    :root{
+      --bg:#0f1115;
+      --panel:rgba(20,22,28,.72);
+      --panel2:rgba(20,22,28,.90);
+      --text:#fff;
+      --muted:rgba(255,255,255,.75);
+      --accent:#ff9f1a;
+      --danger:#ff3b3b;
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --shadow2: 0 8px 22px rgba(0,0,0,.35);
+    }
 
-    /* BOSS banner */
-    #bossBanner {
-      position: absolute;
-      top: 45px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 20;
-      pointer-events: none;
-      font-weight: 900;
-      letter-spacing: 6px;
-      font-size: 30px;
-      color: #ff2e2e;
-      text-shadow: 3px 3px 0 #000, 0 0 12px rgba(255,0,0,0.35);
-      display: none;
-      user-select: none;
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;outline:none}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 700px at 50% 20%, #1b2030 0%, #0f1115 55%, #0b0d12 100%);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color:var(--text);
+      overflow:hidden;
+      touch-action:none;
+      display:flex;
+      flex-direction:column;
+    }
+
+    #game-container{
+      flex:1;
+      position:relative;
+      width:100%;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:10px;
+    }
+
+    .frame{
+      width:min(900px, 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+
+    canvas{
+      width:100%;
+      height:auto;
+      display:block;
+      background: #87CEEB;
+      border-bottom:5px solid #2d5a27;
+    }
+
+    .ui{
+      position:absolute;
+      top:10px;
+      left:0;
+      right:0;
+      padding:0 14px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      z-index:20;
+      pointer-events:none;
+      font-weight:800;
+      letter-spacing:.2px;
+      text-shadow: 0 2px 10px rgba(0,0,0,.55);
+    }
+    .pill{
+      background: var(--panel);
+      border:1px solid rgba(255,255,255,.10);
+      padding:8px 10px;
+      border-radius:999px;
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(8px);
+      font-size:14px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+    }
+    .pill b{font-weight:900}
+    .muted{color:var(--muted); font-weight:700}
+
+    #bossBanner{
+      position:absolute;
+      top:56px;
+      left:50%;
+      transform:translateX(-50%) scale(.9);
+      z-index:30;
+      pointer-events:none;
+      user-select:none;
+      font-weight:1000;
+      letter-spacing:10px;
+      font-size:28px;
+      color:var(--danger);
+      text-shadow: 0 10px 25px rgba(0,0,0,.55), 0 0 18px rgba(255,59,59,.35);
+      opacity:0;
+      display:none;
+    }
+    #bossBanner.show{
+      display:block;
+      animation: bossPop 900ms ease-out forwards;
+    }
+    @keyframes bossPop{
+      0%{opacity:0; transform:translateX(-50%) translateY(-6px) scale(.9)}
+      45%{opacity:1; transform:translateX(-50%) translateY(0) scale(1.08)}
+      100%{opacity:1; transform:translateX(-50%) translateY(0) scale(1)}
+    }
+
+    #overlay{
+      position:absolute;
+      inset:0;
+      background: radial-gradient(900px 600px at 50% 35%, rgba(0,0,0,.65) 0%, rgba(0,0,0,.84) 50%, rgba(0,0,0,.92) 100%);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+      z-index:50;
+      padding:22px;
+    }
+    #overlay h1{
+      margin:0 0 10px 0;
+      font-size:44px;
+      letter-spacing:1px;
+      color:var(--accent);
+      text-shadow: 0 10px 30px rgba(0,0,0,.6);
+    }
+    #overlay p{
+      margin:6px 0;
+      max-width:620px;
+      color:rgba(255,255,255,.86);
+      line-height:1.35;
+      font-weight:650;
+    }
+    .start-btn{
+      margin-top:16px;
+      padding:16px 44px;
+      background: linear-gradient(180deg, #ffb347, #ff8a00);
+      color:#fff;
+      border:none;
+      border-radius:14px;
+      font-size:22px;
+      font-weight:950;
+      cursor:pointer;
+      box-shadow: 0 14px 30px rgba(255,154,26,.22), 0 10px 0 rgba(140,80,0,.55);
+      transform: translateY(0);
+      transition: transform .08s ease;
+    }
+    .start-btn:active{ transform: translateY(2px); box-shadow: 0 12px 26px rgba(255,154,26,.18), 0 6px 0 rgba(140,80,0,.55); }
+
+    .controls{
+      display:flex;
+      gap:14px;
+      padding:14px;
+      background: rgba(0,0,0,.35);
+      border-top:1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(10px);
+    }
+    .btn{
+      flex:1;
+      height:88px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+      font-size:24px;
+      font-weight:950;
+      letter-spacing:.5px;
+      color:#14161c;
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.78));
+      box-shadow: var(--shadow2);
+      cursor:pointer;
+    }
+    .btn:active{ transform: translateY(2px); }
+    .btn.fire{
+      color:#fff;
+      border-color: rgba(255,255,255,.10);
+      background: linear-gradient(180deg, #ff5a5a, #ff2e2e);
+    }
+
+    @media (max-width:420px){
+      #overlay h1{font-size:38px}
+      .btn{height:80px; font-size:22px}
+      #bossBanner{font-size:24px; letter-spacing:8px}
+      .pill{font-size:13px}
     }
   </style>
 </head>
+
 <body>
+  <div id="game-container">
+    <div class="frame">
+      <div class="ui">
+        <div class="pill">
+          <span class="muted">Score</span> <b id="s">0</b>
+          <span class="muted">| 🥕</span> <b id="c">0</b>
+        </div>
+        <div class="pill">
+          <span class="muted">Highscore</span> <b id="hs">0</b>
+          <span class="muted">| Lvl</span> <b id="l">1</b>
+        </div>
+      </div>
 
-<div id="game-container">
-  <div class="ui">
-    <div>Score: <span id="s">0</span> | 🥕: <span id="c">0</span></div>
-    <div>Highscore: <span id="hs">0</span> | Lvl: <span id="l">1</span></div>
+      <div id="bossBanner">BOSS</div>
+
+      <div id="overlay">
+        <h1>RABBIT WORLDS</h1>
+        <p>Jump over logs, collect carrots, and defeat the boss every <b>5th level</b>.</p>
+        <p>Tip: collect carrots to gain points. Shooting clears logs and damages the boss.</p>
+        <p class="muted">Highscore: <b id="ohs">0</b></p>
+        <button class="start-btn" id="startBtn">START</button>
+      </div>
+
+      <canvas id="g"></canvas>
+    </div>
   </div>
 
-  <div id="bossBanner">BOSS</div>
-
-  <div id="overlay">
-    <h1 id="ot" style="color: orange; margin: 0; font-size: 45px;">RABBIT WORLDS</h1>
-    <p id="os" class="sub">Jump over logs, collect carrots, and defeat the boss every 5th level.</p>
-    <p class="sub" style="margin-top:0;">Highscore: <span id="ohs">0</span></p>
-    <button class="start-btn" id="startBtn">START</button>
+  <div class="controls">
+    <button id="jb" class="btn">JUMP</button>
+    <button id="fb" class="btn fire">FIRE 🔥</button>
   </div>
-
-  <canvas id="g" width="800" height="400"></canvas>
-</div>
-
-<div class="controls">
-  <button id="jb" class="btn">JUMP</button>
-  <button id="fb" class="btn" style="background: #ff4444; color: white;">FIRE 🔥</button>
-</div>
 
 <script>
-  const canvas = document.getElementById("g");
-  const ctx = canvas.getContext("2d");
+/* -----------------------------
+   Rabbit Worlds — polished build
+   - Responsive canvas
+   - Delta-time movement
+   - Boss every 5th level + banner
+   - Particles + tiny camera shake
+   - Dynamic difficulty scaling
+-------------------------------- */
 
-  const elS = document.getElementById("s");
-  const elC = document.getElementById("c");
-  const elL = document.getElementById("l");
-  const elHS = document.getElementById("hs");
-  const elOHS = document.getElementById("ohs");
+const canvas = document.getElementById("g");
+const ctx = canvas.getContext("2d");
 
-  const overlay = document.getElementById("overlay");
-  const overlayTitle = document.getElementById("ot");
-  const overlaySub = document.getElementById("os");
-  const startBtn = document.getElementById("startBtn");
-  const bossBanner = document.getElementById("bossBanner");
+const elS  = document.getElementById("s");
+const elC  = document.getElementById("c");
+const elL  = document.getElementById("l");
+const elHS = document.getElementById("hs");
+const elOHS = document.getElementById("ohs");
 
-  // Highscore (localStorage works on GitHub Pages)
-  const HIGHSCORE_KEY = "rabbit_highscore_v5";
-  let highscore = Number(localStorage.getItem(HIGHSCORE_KEY)) || 0;
+const overlay = document.getElementById("overlay");
+const startBtn = document.getElementById("startBtn");
+const bossBanner = document.getElementById("bossBanner");
+
+const HIGHSCORE_KEY = "rabbit_highscore_v6";
+let highscore = Number(localStorage.getItem(HIGHSCORE_KEY)) || 0;
+elHS.textContent = highscore;
+elOHS.textContent = highscore;
+
+// Logical game size (we draw in this coordinate system)
+const BASE_W = 800;
+const BASE_H = 400;
+
+// Responsive canvas sizing with DPR for sharpness
+function resizeCanvas(){
+  const frame = canvas.parentElement;
+  const cssW = frame.clientWidth;
+  const cssH = Math.round(cssW * (BASE_H / BASE_W));
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+  canvas.style.width = cssW + "px";
+  canvas.style.height = cssH + "px";
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+
+  // Map drawing space to BASE_W x BASE_H
+  ctx.setTransform(dpr * (cssW/BASE_W), 0, 0, dpr * (cssH/BASE_H), 0, 0);
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+// Game state
+let running = false;
+let lastT = 0;
+
+let score = 0;
+let carrots = 0;
+let level = 1;
+
+let rabbit;
+let stones = [];
+let logs = [];
+let items = [];
+let boss = null;
+
+const bossDefeated = {}; // level -> true
+
+// Spawn timers
+let tLog = 0;
+let tCarrot = 0;
+
+// Lanes for variation
+const logLanesY = [335, 305];
+const carrotLanesY = [120, 170, 220, 270, 320];
+let logLaneIdx = 0;
+let carrotLaneIdx = 0;
+
+// Background clouds (small animation polish)
+let clouds = [
+  {x: 50,  y: 55, s: 0.35, v: 10},
+  {x: 320, y: 40, s: 0.50, v: 14},
+  {x: 650, y: 70, s: 0.40, v: 12},
+];
+
+// Particles (collect/hit effects)
+let particles = []; // {x,y,vx,vy,life,ttl,size,kind}
+
+// Camera shake
+let shakeT = 0;
+let shakeMag = 0;
+
+// Helpers
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const isBossLevel = (lvl) => lvl % 5 === 0;
+
+function rectHit(ax, ay, aw, ah, bx, by, bw, bh){
+  return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+}
+
+function addShake(mag, dur){
+  shakeMag = Math.max(shakeMag, mag);
+  shakeT = Math.max(shakeT, dur);
+}
+
+function spawnParticles(x, y, n, kind){
+  for (let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2;
+    const sp = 40 + Math.random()*140;
+    particles.push({
+      x, y,
+      vx: Math.cos(a)*sp,
+      vy: Math.sin(a)*sp - 30,
+      life: 0,
+      ttl: 0.35 + Math.random()*0.35,
+      size: 2 + Math.random()*3,
+      kind
+    });
+  }
+}
+
+function resetGame(){
+  score = 0;
+  carrots = 0;
+  level = 1;
+
+  stones = [];
+  logs = [];
+  items = [];
+  boss = null;
+
+  tLog = 0;
+  tCarrot = 0;
+  logLaneIdx = 0;
+  carrotLaneIdx = 0;
+
+  for (const k in bossDefeated) delete bossDefeated[k];
+
+  particles = [];
+  shakeT = 0;
+  shakeMag = 0;
+
+  rabbit = { x: 60, y: 310, dy: 0, jumping: false };
+
+  bossBanner.classList.remove("show");
+  bossBanner.style.display = "none";
+  overlay.style.display = "none";
+
+  running = true;
+  lastT = performance.now();
+  requestAnimationFrame(loop);
+}
+
+function gameOver(){
+  running = false;
+  bossBanner.classList.remove("show");
+  bossBanner.style.display = "none";
+
+  if (score > highscore){
+    highscore = score;
+    localStorage.setItem(HIGHSCORE_KEY, String(score));
+  }
   elHS.textContent = highscore;
   elOHS.textContent = highscore;
 
-  // Boss every 5th level
-  const isBossLevel = (lvl) => lvl % 5 === 0;
-  const bossDefeated = {}; // level -> true
+  overlay.style.display = "flex";
+}
 
-  // Lanes to alternate positions
-  const logLanesY = [335, 305];
-  const carrotLanesY = [120, 170, 220, 270, 320];
+// Controls
+function doJump(e){
+  e.preventDefault();
+  if (!running) return;
+  if (!rabbit.jumping){
+    rabbit.dy = -760; // higher jump
+    rabbit.jumping = true;
+    addShake(1.2, 0.08);
+  }
+}
+function doFire(e){
+  e.preventDefault();
+  if (!running) return;
+  stones.push({ x: rabbit.x + 40, y: rabbit.y + 20, r: 10 });
+}
 
-  // Game state
-  let running = false;
-  let lastT = 0;
+document.getElementById("jb").addEventListener("mousedown", doJump);
+document.getElementById("jb").addEventListener("touchstart", doJump, {passive:false});
+document.getElementById("fb").addEventListener("mousedown", doFire);
+document.getElementById("fb").addEventListener("touchstart", doFire, {passive:false});
+startBtn.addEventListener("click", resetGame);
 
-  let score = 0;
-  let carrots = 0;
-  let level = 1;
+// Drawing primitives
+function drawCloud(c){
+  ctx.save();
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.beginPath();
+  ctx.ellipse(c.x, c.y, 26*c.s, 16*c.s, 0, 0, Math.PI*2);
+  ctx.ellipse(c.x+22*c.s, c.y+2*c.s, 22*c.s, 14*c.s, 0, 0, Math.PI*2);
+  ctx.ellipse(c.x-18*c.s, c.y+4*c.s, 20*c.s, 13*c.s, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
 
-  let rabbit;
-  let stones = [];
-  let logs = [];
-  let items = [];
-  let boss = null;
+function drawGround(){
+  // small gradient line on grass
+  ctx.fillStyle = "rgba(0,0,0,0.10)";
+  ctx.fillRect(0, 335, BASE_W, 3);
+}
 
-  // Timers for spawn (delta time)
-  let tLog = 0;
-  let tCarrot = 0;
+function drawRabbit(x, y){
+  // soft shadow
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.beginPath();
+  ctx.ellipse(x + 20, 350, 16, 5, 0, 0, Math.PI*2);
+  ctx.fill();
 
-  // Lane indices
-  let logLaneIdx = 0;
-  let carrotLaneIdx = 0;
+  // body
+  ctx.fillStyle = "white";
+  ctx.beginPath();
+  ctx.ellipse(x + 20, y + 25, 18, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
 
-  function rectHit(ax, ay, aw, ah, bx, by, bw, bh) {
-    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  // head
+  ctx.beginPath();
+  ctx.arc(x + 30, y + 12, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ears
+  ctx.fillStyle = "white";
+  ctx.fillRect(x + 24, y - 10, 6, 20);
+  ctx.fillRect(x + 34, y - 10, 6, 20);
+
+  ctx.fillStyle = "pink";
+  ctx.fillRect(x + 26, y - 8, 2, 16);
+  ctx.fillRect(x + 36, y - 8, 2, 16);
+
+  // eyes
+  ctx.fillStyle = "#000";
+  ctx.beginPath(); ctx.arc(x + 32, y + 10, 1.6, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 36, y + 10, 1.6, 0, Math.PI*2); ctx.fill();
+
+  // nose
+  ctx.fillStyle = "pink";
+  ctx.beginPath(); ctx.arc(x + 39, y + 13, 1.6, 0, Math.PI*2); ctx.fill();
+
+  // whiskers
+  ctx.strokeStyle = "rgba(0,0,0,0.6)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + 40, y + 13); ctx.lineTo(x + 49, y + 10);
+  ctx.moveTo(x + 40, y + 14); ctx.lineTo(x + 50, y + 14);
+  ctx.moveTo(x + 40, y + 15); ctx.lineTo(x + 49, y + 18);
+  ctx.stroke();
+}
+
+function drawLog(x, y){
+  // body
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(x, y, 60, 40);
+
+  // detail stripe
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.fillRect(x, y + 15, 60, 4);
+
+  // bark texture
+  ctx.strokeStyle = "rgba(0,0,0,0.12)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + 8, y + 8);  ctx.lineTo(x + 52, y + 8);
+  ctx.moveTo(x + 10, y + 28); ctx.lineTo(x + 50, y + 28);
+  ctx.stroke();
+
+  // subtle highlight
+  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.beginPath();
+  ctx.moveTo(x + 6, y + 6); ctx.lineTo(x + 52, y + 6);
+  ctx.stroke();
+}
+
+function drawCarrot(x, y){
+  // leaves (bigger, layered)
+  ctx.fillStyle = "#1e8f3e";
+  ctx.beginPath();
+  ctx.moveTo(x + 11, y - 18);
+  ctx.lineTo(x - 6,  y + 6);
+  ctx.lineTo(x + 10, y + 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#2ecc71";
+  ctx.beginPath();
+  ctx.moveTo(x + 11, y - 18);
+  ctx.lineTo(x + 28, y + 6);
+  ctx.lineTo(x + 12, y + 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#27ae60";
+  ctx.beginPath();
+  ctx.moveTo(x + 11, y - 22);
+  ctx.lineTo(x + 4,  y - 2);
+  ctx.lineTo(x + 18, y - 2);
+  ctx.closePath();
+  ctx.fill();
+
+  // carrot body with shading
+  ctx.fillStyle = "#ff7f00";
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + 22, y);
+  ctx.lineTo(x + 11, y + 30);
+  ctx.closePath();
+  ctx.fill();
+
+  // shadow side
+  ctx.fillStyle = "rgba(0,0,0,0.09)";
+  ctx.beginPath();
+  ctx.moveTo(x + 2, y + 2);
+  ctx.lineTo(x + 9, y + 26);
+  ctx.lineTo(x + 6, y + 26);
+  ctx.closePath();
+  ctx.fill();
+
+  // texture lines
+  ctx.strokeStyle = "rgba(255,255,255,0.28)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + 6, y + 7);  ctx.lineTo(x + 15, y + 7);
+  ctx.moveTo(x + 7, y + 15); ctx.lineTo(x + 14, y + 15);
+  ctx.moveTo(x + 8, y + 23); ctx.lineTo(x + 13, y + 23);
+  ctx.stroke();
+
+  // tiny highlight
+  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.beginPath();
+  ctx.moveTo(x + 11, y + 4);
+  ctx.lineTo(x + 11, y + 24);
+  ctx.stroke();
+}
+
+function spawnBoss(lvl){
+  const hp = 14 + Math.floor(lvl * 2);
+  boss = { x: 640, y: 80, w: 80, h: 80, hp, max: hp, dir: 170 };
+  bossBanner.classList.add("show");
+}
+
+function drawBossCat(b){
+  // head
+  ctx.fillStyle = "#333";
+  ctx.beginPath();
+  ctx.arc(b.x + 40, b.y + 42, 34, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ears
+  ctx.beginPath();
+  ctx.moveTo(b.x + 18, b.y + 24);
+  ctx.lineTo(b.x + 28, b.y + 8);
+  ctx.lineTo(b.x + 34, b.y + 26);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(b.x + 62, b.y + 24);
+  ctx.lineTo(b.x + 52, b.y + 8);
+  ctx.lineTo(b.x + 46, b.y + 26);
+  ctx.closePath();
+  ctx.fill();
+
+  // inner ears
+  ctx.fillStyle = "#555";
+  ctx.beginPath();
+  ctx.moveTo(b.x + 22, b.y + 24);
+  ctx.lineTo(b.x + 28, b.y + 14);
+  ctx.lineTo(b.x + 32, b.y + 26);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(b.x + 58, b.y + 24);
+  ctx.lineTo(b.x + 52, b.y + 14);
+  ctx.lineTo(b.x + 48, b.y + 26);
+  ctx.closePath();
+  ctx.fill();
+
+  // eyes + pupils
+  ctx.fillStyle = "yellow";
+  ctx.fillRect(b.x + 30, b.y + 40, 7, 7);
+  ctx.fillRect(b.x + 45, b.y + 40, 7, 7);
+
+  ctx.fillStyle = "#000";
+  ctx.fillRect(b.x + 33, b.y + 41, 2, 5);
+  ctx.fillRect(b.x + 48, b.y + 41, 2, 5);
+
+  // nose
+  ctx.fillStyle = "pink";
+  ctx.beginPath();
+  ctx.arc(b.x + 41, b.y + 52, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // whiskers
+  ctx.strokeStyle = "rgba(255,255,255,0.75)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(b.x + 39, b.y + 52); ctx.lineTo(b.x + 18, b.y + 46);
+  ctx.moveTo(b.x + 39, b.y + 53); ctx.lineTo(b.x + 17, b.y + 52);
+  ctx.moveTo(b.x + 39, b.y + 54); ctx.lineTo(b.x + 18, b.y + 58);
+  ctx.moveTo(b.x + 43, b.y + 52); ctx.lineTo(b.x + 64, b.y + 46);
+  ctx.moveTo(b.x + 43, b.y + 53); ctx.lineTo(b.x + 65, b.y + 52);
+  ctx.moveTo(b.x + 43, b.y + 54); ctx.lineTo(b.x + 64, b.y + 58);
+  ctx.stroke();
+
+  // HP bar
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.fillRect(b.x-2, b.y - 18, 84, 10);
+  ctx.fillStyle = "red";
+  ctx.fillRect(b.x, b.y - 15, (b.hp / b.max) * 80, 6);
+}
+
+// Main loop
+function loop(now){
+  if (!running) return;
+
+  const dt = Math.min(0.033, (now - lastT) / 1000);
+  lastT = now;
+
+  // difficulty scaling (more dynamic)
+  const logSpeed = 240 + level * 20;               // faster per level
+  const carrotSpeed = 190 + Math.floor(level/4)*6; // tiny scaling
+  const stoneSpeed = 520;
+
+  // spawn cadence (harder: more logs, fewer carrots over time)
+  const logInterval = clamp(1.18 - level * 0.04, 0.58, 1.18);
+  const carrotInterval = clamp(1.38 + level * 0.015, 1.38, 1.75);
+
+  // camera shake
+  let sx = 0, sy = 0;
+  if (shakeT > 0){
+    shakeT -= dt;
+    const t = Math.max(0, shakeT);
+    const mag = shakeMag * (t / 0.10);
+    sx = (Math.random()*2-1) * mag;
+    sy = (Math.random()*2-1) * mag;
+    if (shakeT <= 0){ shakeMag = 0; }
   }
 
-  function resetGame() {
-    score = 0;
-    carrots = 0;
-    level = 1;
+  ctx.save();
+  ctx.translate(sx, sy);
 
-    stones = [];
-    logs = [];
-    items = [];
-    boss = null;
+  // clear
+  ctx.clearRect(0, 0, BASE_W, BASE_H);
 
-    tLog = 0;
-    tCarrot = 0;
-    logLaneIdx = 0;
-    carrotLaneIdx = 0;
+  // background polish: sky gradient overlay
+  const g = ctx.createLinearGradient(0,0,0,BASE_H);
+  g.addColorStop(0, "rgba(255,255,255,0.05)");
+  g.addColorStop(1, "rgba(0,0,0,0.08)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,BASE_W,BASE_H);
 
-    for (const k in bossDefeated) delete bossDefeated[k];
+  // clouds
+  for (const c of clouds){
+    c.x += c.v * dt;
+    if (c.x > BASE_W + 80) c.x = -80;
+    drawCloud(c);
+  }
 
-    rabbit = { x: 60, y: 310, dy: 0, jumping: false, w: 40, h: 40 };
+  // player physics
+  rabbit.dy += 1400 * dt;
+  rabbit.y += rabbit.dy * dt;
+  if (rabbit.y > 310){
+    rabbit.y = 310;
+    rabbit.dy = 0;
+    rabbit.jumping = false;
+  }
 
+  // boss spawn
+  if (isBossLevel(level) && !bossDefeated[level] && !boss){
+    logs.length = 0;
+    items.length = 0;
+    spawnBoss(level);
+  }
+
+  // spawns only without boss
+  if (!boss){
+    bossBanner.classList.remove("show");
     bossBanner.style.display = "none";
-    overlay.style.display = "none";
-    overlayTitle.textContent = "RABBIT WORLDS";
-    overlaySub.textContent = "Jump over logs, collect carrots, and defeat the boss every 5th level.";
 
-    if (!running) {
-      running = true;
-      lastT = performance.now();
-      requestAnimationFrame(loop);
-    } else {
-      lastT = performance.now();
+    tLog += dt;
+    tCarrot += dt;
+
+    if (tLog >= logInterval){
+      tLog = 0;
+
+      const y = logLanesY[logLaneIdx % logLanesY.length];
+      logLaneIdx++;
+
+      // sometimes spawn a “double” log on higher levels (harder)
+      logs.push({ x: 850, y, w: 60, h: 40 });
+
+      if (level >= 6 && Math.random() < 0.18){
+        const y2 = logLanesY[(logLaneIdx + 1) % logLanesY.length];
+        logs.push({ x: 930, y: y2, w: 60, h: 40 });
+      }
     }
-  }
 
-  function gameOver() {
-    running = false;
-
-    if (score > highscore) {
-      highscore = score;
-      localStorage.setItem(HIGHSCORE_KEY, String(score));
+    if (tCarrot >= carrotInterval){
+      tCarrot = 0;
+      const y = carrotLanesY[carrotLaneIdx % carrotLanesY.length];
+      carrotLaneIdx++;
+      items.push({ x: 850, y, w: 25, h: 30 });
     }
-    elHS.textContent = highscore;
-    elOHS.textContent = highscore;
-
-    bossBanner.style.display = "none";
-    overlay.style.display = "flex";
-    overlayTitle.textContent = "GAME OVER";
-    overlaySub.textContent = "Press START to play again.";
-  }
-
-  // Controls
-  function doJump(e) {
-    e.preventDefault();
-    if (!running) return;
-    if (!rabbit.jumping) {
-      rabbit.dy = -720; // higher jump
-      rabbit.jumping = true;
-    }
-  }
-
-  function doFire(e) {
-    e.preventDefault();
-    if (!running) return;
-    stones.push({ x: rabbit.x + 40, y: rabbit.y + 20, r: 10 });
-  }
-
-  document.getElementById("jb").addEventListener("mousedown", doJump);
-  document.getElementById("jb").addEventListener("touchstart", doJump, { passive: false });
-  document.getElementById("fb").addEventListener("mousedown", doFire);
-  document.getElementById("fb").addEventListener("touchstart", doFire, { passive: false });
-  startBtn.addEventListener("click", resetGame);
-
-  // Drawing
-  function drawRabbit(x, y) {
-    // Body
-    ctx.fillStyle = "white";
-    ctx.beginPath();
-    ctx.ellipse(x + 20, y + 25, 18, 14, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Head
-    ctx.beginPath();
-    ctx.arc(x + 30, y + 12, 10, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Ears (white)
-    ctx.fillStyle = "white";
-    ctx.fillRect(x + 24, y - 10, 6, 20);
-    ctx.fillRect(x + 34, y - 10, 6, 20);
-
-    // Inner ears (pink)
-    ctx.fillStyle = "pink";
-    ctx.fillRect(x + 26, y - 8, 2, 16);
-    ctx.fillRect(x + 36, y - 8, 2, 16);
-
-    // Eyes
-    ctx.fillStyle = "#000";
-    ctx.beginPath(); ctx.arc(x + 32, y + 10, 1.6, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 36, y + 10, 1.6, 0, Math.PI * 2); ctx.fill();
-
-    // Nose
-    ctx.fillStyle = "pink";
-    ctx.beginPath(); ctx.arc(x + 39, y + 13, 1.6, 0, Math.PI * 2); ctx.fill();
-
-    // Whiskers
-    ctx.strokeStyle = "rgba(0,0,0,0.6)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x + 40, y + 13); ctx.lineTo(x + 49, y + 10);
-    ctx.moveTo(x + 40, y + 14); ctx.lineTo(x + 50, y + 14);
-    ctx.moveTo(x + 40, y + 15); ctx.lineTo(x + 49, y + 18);
-    ctx.stroke();
-  }
-
-  function drawLog(x, y) {
-    ctx.fillStyle = "#8B4513";
-    ctx.fillRect(x, y, 60, 40);
-    ctx.fillStyle = "#5D2E0A";
-    ctx.fillRect(x, y + 15, 60, 4);
-
-    // subtle bark lines
-    ctx.strokeStyle = "rgba(0,0,0,0.15)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x + 8, y + 8);  ctx.lineTo(x + 52, y + 8);
-    ctx.moveTo(x + 10, y + 28); ctx.lineTo(x + 50, y + 28);
-    ctx.stroke();
-  }
-
-  function drawCarrot(x, y) {
-    // Leaves (bigger & clearer)
-    ctx.fillStyle = "#1e8f3e";
-    ctx.beginPath();
-    ctx.moveTo(x + 11, y - 18);
-    ctx.lineTo(x - 6,  y + 6);
-    ctx.lineTo(x + 10, y + 2);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = "#2ecc71";
-    ctx.beginPath();
-    ctx.moveTo(x + 11, y - 18);
-    ctx.lineTo(x + 28, y + 6);
-    ctx.lineTo(x + 12, y + 2);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = "#27ae60";
-    ctx.beginPath();
-    ctx.moveTo(x + 11, y - 22);
-    ctx.lineTo(x + 4,  y - 2);
-    ctx.lineTo(x + 18, y - 2);
-    ctx.closePath();
-    ctx.fill();
-
-    // Carrot body
-    ctx.fillStyle = "#ff7f00";
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + 22, y);
-    ctx.lineTo(x + 11, y + 30);
-    ctx.closePath();
-    ctx.fill();
-
-    // Shading
-    ctx.fillStyle = "rgba(0,0,0,0.08)";
-    ctx.beginPath();
-    ctx.moveTo(x + 2, y + 2);
-    ctx.lineTo(x + 9, y + 26);
-    ctx.lineTo(x + 6, y + 26);
-    ctx.closePath();
-    ctx.fill();
-
-    // Texture lines
-    ctx.strokeStyle = "rgba(255,255,255,0.28)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x + 6, y + 7);  ctx.lineTo(x + 15, y + 7);
-    ctx.moveTo(x + 7, y + 15); ctx.lineTo(x + 14, y + 15);
-    ctx.moveTo(x + 8, y + 23); ctx.lineTo(x + 13, y + 23);
-    ctx.stroke();
-
-    // Tiny highlight
-    ctx.strokeStyle = "rgba(255,255,255,0.18)";
-    ctx.beginPath();
-    ctx.moveTo(x + 11, y + 4);
-    ctx.lineTo(x + 11, y + 24);
-    ctx.stroke();
-  }
-
-  function spawnBoss(lvl) {
-    const hp = 14 + Math.floor(lvl * 2);
-    boss = { x: 640, y: 80, w: 80, h: 80, hp, max: hp, dir: 160 };
+  } else {
     bossBanner.style.display = "block";
+    bossBanner.classList.add("show");
   }
 
-  function drawBossCat(b) {
-    // Head
-    ctx.fillStyle = "#333";
-    ctx.beginPath();
-    ctx.arc(b.x + 40, b.y + 42, 34, 0, Math.PI * 2);
-    ctx.fill();
+  // draw ground polish
+  drawGround();
 
-    // Ears
-    ctx.beginPath();
-    ctx.moveTo(b.x + 18, b.y + 24);
-    ctx.lineTo(b.x + 28, b.y + 8);
-    ctx.lineTo(b.x + 34, b.y + 26);
-    ctx.closePath();
-    ctx.fill();
+  // draw rabbit
+  drawRabbit(rabbit.x, rabbit.y);
 
-    ctx.beginPath();
-    ctx.moveTo(b.x + 62, b.y + 24);
-    ctx.lineTo(b.x + 52, b.y + 8);
-    ctx.lineTo(b.x + 46, b.y + 26);
-    ctx.closePath();
-    ctx.fill();
+  // logs update + collision
+  for (let i = logs.length - 1; i >= 0; i--){
+    const lg = logs[i];
+    lg.x -= logSpeed * dt;
+    drawLog(lg.x, lg.y);
 
-    // Inner ears
+    if (rectHit(rabbit.x, rabbit.y, 35, 35, lg.x, lg.y, lg.w, lg.h)){
+      addShake(5, 0.14);
+      spawnParticles(rabbit.x+25, rabbit.y+18, 18, "hit");
+      ctx.restore();
+      gameOver();
+      return;
+    }
+    if (lg.x < -140) logs.splice(i, 1);
+  }
+
+  // carrots update + collision
+  for (let i = items.length - 1; i >= 0; i--){
+    const it = items[i];
+    it.x -= carrotSpeed * dt;
+    drawCarrot(it.x, it.y);
+
+    if (rectHit(rabbit.x, rabbit.y, 40, 40, it.x, it.y, it.w, it.h)){
+      carrots++;
+      score += 100;
+      spawnParticles(it.x+10, it.y+12, 14, "carrot");
+      addShake(1.8, 0.08);
+      items.splice(i, 1);
+    } else if (it.x < -90){
+      items.splice(i, 1);
+    }
+  }
+
+  // boss update
+  if (boss){
+    boss.y += boss.dir * dt;
+    if (boss.y > 280){ boss.y = 280; boss.dir *= -1; }
+    if (boss.y < 20){  boss.y = 20;  boss.dir *= -1; }
+    drawBossCat(boss);
+  }
+
+  // stones update + collision
+  for (let i = stones.length - 1; i >= 0; i--){
+    const s = stones[i];
+    s.x += stoneSpeed * dt;
+
     ctx.fillStyle = "#555";
     ctx.beginPath();
-    ctx.moveTo(b.x + 22, b.y + 24);
-    ctx.lineTo(b.x + 28, b.y + 14);
-    ctx.lineTo(b.x + 32, b.y + 26);
-    ctx.closePath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.beginPath();
-    ctx.moveTo(b.x + 58, b.y + 24);
-    ctx.lineTo(b.x + 52, b.y + 14);
-    ctx.lineTo(b.x + 48, b.y + 26);
-    ctx.closePath();
-    ctx.fill();
+    let hit = false;
 
-    // Eyes
-    ctx.fillStyle = "yellow";
-    ctx.fillRect(b.x + 30, b.y + 40, 7, 7);
-    ctx.fillRect(b.x + 45, b.y + 40, 7, 7);
+    // hit logs
+    for (let j = logs.length - 1; j >= 0; j--){
+      const lg = logs[j];
+      if (rectHit(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2, lg.x, lg.y, lg.w, lg.h)){
+        logs.splice(j, 1);
+        score += 50;
+        spawnParticles(lg.x+30, lg.y+18, 12, "wood");
+        addShake(2.2, 0.10);
+        hit = true;
+        break;
+      }
+    }
 
-    // Pupils
-    ctx.fillStyle = "#000";
-    ctx.fillRect(b.x + 33, b.y + 41, 2, 5);
-    ctx.fillRect(b.x + 48, b.y + 41, 2, 5);
+    // hit boss
+    if (!hit && boss){
+      if (rectHit(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2, boss.x, boss.y, boss.w, boss.h)){
+        boss.hp--;
+        score += 25;
+        spawnParticles(boss.x+40, boss.y+42, 10, "hit");
+        addShake(2.8, 0.11);
+        hit = true;
 
-    // Nose
-    ctx.fillStyle = "pink";
-    ctx.beginPath();
-    ctx.arc(b.x + 41, b.y + 52, 2, 0, Math.PI * 2);
-    ctx.fill();
+        if (boss.hp <= 0){
+          bossDefeated[level] = true;
+          boss = null;
+          score += 1000;
+          level++;
+          spawnParticles(680, 120, 28, "win");
+          addShake(6, 0.18);
+        }
+      }
+    }
 
-    // Whiskers
-    ctx.strokeStyle = "rgba(255,255,255,0.75)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    // left
-    ctx.moveTo(b.x + 39, b.y + 52); ctx.lineTo(b.x + 18, b.y + 46);
-    ctx.moveTo(b.x + 39, b.y + 53); ctx.lineTo(b.x + 17, b.y + 52);
-    ctx.moveTo(b.x + 39, b.y + 54); ctx.lineTo(b.x + 18, b.y + 58);
-    // right
-    ctx.moveTo(b.x + 43, b.y + 52); ctx.lineTo(b.x + 64, b.y + 46);
-    ctx.moveTo(b.x + 43, b.y + 53); ctx.lineTo(b.x + 65, b.y + 52);
-    ctx.moveTo(b.x + 43, b.y + 54); ctx.lineTo(b.x + 64, b.y + 58);
-    ctx.stroke();
-
-    // HP bar
-    ctx.fillStyle = "red";
-    ctx.fillRect(b.x, b.y - 15, (b.hp / b.max) * 80, 6);
+    if (hit || s.x > 900) stones.splice(i, 1);
   }
 
-  function loop(now) {
-    if (!running) return;
+  // particles update
+  for (let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i];
+    p.life += dt;
+    p.vy += 420 * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
 
-    // dt in seconds, clamped
-    const dt = Math.min(0.033, (now - lastT) / 1000);
-    lastT = now;
+    const a = 1 - (p.life / p.ttl);
+    ctx.globalAlpha = clamp(a, 0, 1);
 
-    ctx.clearRect(0, 0, 800, 400);
-
-    // Player physics
-    rabbit.dy += 1400 * dt;
-    rabbit.y += rabbit.dy * dt;
-
-    if (rabbit.y > 310) {
-      rabbit.y = 310;
-      rabbit.dy = 0;
-      rabbit.jumping = false;
-    }
-
-    // Boss spawn (once per boss level)
-    if (isBossLevel(level) && !bossDefeated[level] && !boss) {
-      logs.length = 0;
-      items.length = 0;
-      spawnBoss(level);
-    }
-
-    // Spawns only when no boss
-    if (!boss) {
-      bossBanner.style.display = "none";
-
-      // Slower/steady spawn intervals
-      const logInterval = Math.max(0.85, 1.25 - level * 0.05); // seconds
-      const carrotInterval = 1.35; // seconds
-
-      tLog += dt;
-      tCarrot += dt;
-
-      if (tLog >= logInterval) {
-        tLog = 0;
-        const y = logLanesY[logLaneIdx % logLanesY.length];
-        logLaneIdx++;
-        logs.push({ x: 850, y, w: 60, h: 40 });
-      }
-
-      if (tCarrot >= carrotInterval) {
-        tCarrot = 0;
-        const y = carrotLanesY[carrotLaneIdx % carrotLanesY.length];
-        carrotLaneIdx++;
-        items.push({ x: 850, y, w: 25, h: 30 });
-      }
+    if (p.kind === "carrot"){
+      ctx.fillStyle = "rgba(255,180,0,1)";
+    } else if (p.kind === "wood"){
+      ctx.fillStyle = "rgba(130,80,20,1)";
+    } else if (p.kind === "win"){
+      ctx.fillStyle = "rgba(255,255,255,1)";
     } else {
-      bossBanner.style.display = "block";
+      ctx.fillStyle = "rgba(255,80,80,1)";
     }
 
-    // Draw rabbit
-    drawRabbit(rabbit.x, rabbit.y);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    ctx.fill();
 
-    // Logs update
-    const logSpeed = 240 + level * 18; // px/s
-    for (let i = logs.length - 1; i >= 0; i--) {
-      const lg = logs[i];
-      lg.x -= logSpeed * dt;
-      drawLog(lg.x, lg.y);
-
-      if (rectHit(rabbit.x, rabbit.y, 35, 35, lg.x, lg.y, lg.w, lg.h)) {
-        gameOver();
-        return;
-      }
-      if (lg.x < -120) logs.splice(i, 1);
-    }
-
-    // Carrots update
-    const carrotSpeed = 190; // px/s
-    for (let i = items.length - 1; i >= 0; i--) {
-      const it = items[i];
-      it.x -= carrotSpeed * dt;
-      drawCarrot(it.x, it.y);
-
-      if (rectHit(rabbit.x, rabbit.y, 40, 40, it.x, it.y, it.w, it.h)) {
-        carrots++;
-        score += 100;
-        items.splice(i, 1);
-      } else if (it.x < -80) {
-        items.splice(i, 1);
-      }
-    }
-
-    // Boss update
-    if (boss) {
-      boss.y += boss.dir * dt;
-      if (boss.y > 280) { boss.y = 280; boss.dir *= -1; }
-      if (boss.y < 20)  { boss.y = 20;  boss.dir *= -1; }
-      drawBossCat(boss);
-    }
-
-    // Stones update
-    const stoneSpeed = 520; // px/s
-    for (let i = stones.length - 1; i >= 0; i--) {
-      const s = stones[i];
-      s.x += stoneSpeed * dt;
-
-      ctx.fillStyle = "#555";
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fill();
-
-      let hit = false;
-
-      // Hit logs
-      for (let j = logs.length - 1; j >= 0; j--) {
-        const lg = logs[j];
-        if (rectHit(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2, lg.x, lg.y, lg.w, lg.h)) {
-          logs.splice(j, 1);
-          score += 50;
-          hit = true;
-          break;
-        }
-      }
-
-      // Hit boss
-      if (!hit && boss) {
-        if (rectHit(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2, boss.x, boss.y, boss.w, boss.h)) {
-          boss.hp--;
-          score += 25;
-          hit = true;
-
-          if (boss.hp <= 0) {
-            bossDefeated[level] = true;
-            boss = null;
-            bossBanner.style.display = "none";
-            score += 1000;
-            level++;
-          }
-        }
-      }
-
-      if (hit || s.x > 900) stones.splice(i, 1);
-    }
-
-    // Level up (non-boss levels only)
-    if (!isBossLevel(level)) {
-      if (score >= level * 1000) level++;
-    }
-
-    // Update highscore display (saved on game over)
-    elHS.textContent = highscore;
-    elOHS.textContent = highscore;
-
-    // UI
-    elS.textContent = score;
-    elC.textContent = carrots;
-    elL.textContent = level;
-
-    requestAnimationFrame(loop);
+    if (p.life >= p.ttl) particles.splice(i, 1);
   }
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+
+  // level up (non-boss levels only)
+  if (!isBossLevel(level)){
+    if (score >= level * 1000) level++;
+  }
+
+  // UI
+  elS.textContent = score;
+  elC.textContent = carrots;
+  elL.textContent = level;
+  elHS.textContent = highscore;
+  elOHS.textContent = highscore;
+
+  requestAnimationFrame(loop);
+}
 </script>
 </body>
 </html>
